@@ -43,9 +43,10 @@ class Customer extends Model
 
     //Restituisce tutti i noleggi appartenenti al cliente.
 
+    //Relazione uno a molti (1:N):
+    //un cliente può effettuare molti noleggi, mentre ogni noleggio appartiene a un solo cliente
     public function rentals(): HasMany
     {
-        //Laravel utilizzerà automaticamente rentals.customer_id
         return $this->hasMany(Rental::class);
     }
 }
