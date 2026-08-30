@@ -1,8 +1,17 @@
 <?php
 
+use App\Http\Controllers\Api\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
-    return $request->user();
+//Raggruppa le rotte accessibili soltanto agli utenti autenticati
+Route::middleware(['auth:sanctum'])->group(function () {
+
+    //Restituisce i dati dell'utente che ha effettuato il login
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    //Crea tutte le rotte CRUD necessarie per gestire i veicoli
+    Route::apiResource('vehicles', VehicleController::class);
 });
