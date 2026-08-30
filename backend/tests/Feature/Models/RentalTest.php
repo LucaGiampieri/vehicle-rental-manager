@@ -13,7 +13,6 @@ use Tests\TestCase;
 class RentalTest extends TestCase
 {
     //Ricrea il database di test prima di ogni metodo
-    //Il database MySQL reale non viene modificato
     use RefreshDatabase;
 
     public function test_factory_creates_a_reserved_rental(): void

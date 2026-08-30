@@ -40,4 +40,11 @@ class Vehicle extends Model
     {
         return $this->hasMany(Rental::class);
     }
+
+    //Relazione uno a molti (1:N):
+    //un veicolo può avere molte spese, mentre ogni spesa appartiene a un solo veicolo
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
 }
