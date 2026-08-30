@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Vehicle;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class VehicleFactory extends Factory
@@ -9,32 +10,49 @@ class VehicleFactory extends Factory
     //Definisce i valori predefiniti di un veicolo fittizio
     public function definition(): array
     {
-        //Sceglie una combinazione coerente di marca, modello e tipo
+        //Sceglie un veicolo con un numero coerente di celle richieste
         $vehicle = fake()->randomElement([
             [
                 'brand' => 'Fiat',
                 'model' => 'Panda',
                 'type' => 'car',
+                'parking_units' => Vehicle::PARKING_UNITS_STANDARD,
             ],
             [
                 'brand' => 'Toyota',
                 'model' => 'Yaris',
                 'type' => 'car',
+                'parking_units' => Vehicle::PARKING_UNITS_STANDARD,
+            ],
+            [
+                'brand' => 'Honda',
+                'model' => 'SH 125',
+                'type' => 'motorcycle',
+                'parking_units' => Vehicle::PARKING_UNITS_SMALL,
             ],
             [
                 'brand' => 'Ford',
                 'model' => 'Transit',
                 'type' => 'van',
+                'parking_units' => Vehicle::PARKING_UNITS_LARGE,
             ],
             [
                 'brand' => 'Fiat',
                 'model' => 'Ducato',
                 'type' => 'camper',
+                'parking_units' => Vehicle::PARKING_UNITS_LARGE,
             ],
             [
                 'brand' => 'Volkswagen',
                 'model' => 'California',
                 'type' => 'camper',
+                'parking_units' => Vehicle::PARKING_UNITS_LARGE,
+            ],
+            [
+                'brand' => 'Iveco',
+                'model' => 'S-Way',
+                'type' => 'truck',
+                'parking_units' => Vehicle::PARKING_UNITS_EXTRA_LARGE,
             ],
         ]);
 
@@ -50,6 +68,7 @@ class VehicleFactory extends Factory
             'brand' => $vehicle['brand'],
             'model' => $vehicle['model'],
             'type' => $vehicle['type'],
+            'parking_units' => $vehicle['parking_units'],
 
             //Genera anno, chilometraggio e tariffa
             'year' => fake()->numberBetween(
