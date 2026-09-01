@@ -44,7 +44,7 @@ class VehicleController extends Controller
         //Carica i conteggi iniziali delle relazioni
         $vehicle->loadCount([
             'rentals',
-            'exspenses',
+            'expenses',
             'parkingSpaces',
         ]);
 
