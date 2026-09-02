@@ -47,6 +47,7 @@ class RentalFactory extends Factory
 
             //Salva il periodo previsto del noleggio
             'starts_at' => $startsAt,
+            'actual_starts_at' => null,
             'expected_ends_at' => $expectedEndsAt,
             'actual_ends_at' => null,
 
