@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\RentalController;
 use App\Http\Controllers\Api\VehicleController;
 use Illuminate\Http\Request;
@@ -18,6 +19,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Crea tutte le rotte CRUD necessarie per gestire i clienti
     Route::apiResource('customers', CustomerController::class);
+
+    //Crea tutte le rotte CRUD necessarie per gestire le spese
+    Route::apiResource('expenses', ExpenseController::class);
 
     //Registra la consegna del mezzo
     Route::patch(
