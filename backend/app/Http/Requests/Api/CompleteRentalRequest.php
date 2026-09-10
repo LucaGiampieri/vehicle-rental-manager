@@ -39,6 +39,15 @@ class CompleteRentalRequest extends FormRequest
                 'before_or_equal:now',
             ],
 
+            //Cella iniziale nella quale parcheggiare il veicolo al rientro.
+            //È facoltativa perché il mezzo potrebbe essere portato in officina.
+            'parking_space_id' => [
+                'sometimes',
+                'required',
+                'integer',
+                'exists:parking_spaces,id',
+            ],
+
             //Il chilometraggio finale è obbligatorio
             'end_mileage' => [
                 'required',

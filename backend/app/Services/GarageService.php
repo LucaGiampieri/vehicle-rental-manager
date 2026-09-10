@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ParkingMovement;
 use App\Models\ParkingSpace;
+use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,13 +19,17 @@ class GarageService
         Vehicle $vehicle,
         ParkingSpace $targetParkingSpace,
         User $user,
-        ?string $notes = null
+        ?string $notes = null,
+        ?Rental $rental = null,
+        string $movementType = ParkingMovement::TYPE_PARKED
     ): ParkingMovement {
         return DB::transaction(function () use (
             $vehicle,
             $targetParkingSpace,
             $user,
-            $notes
+            $notes,
+            $rental,
+            $movementType
         ) {
             //Blocca il veicolo durante l'operazione.
             $vehicle = Vehicle::query()
@@ -60,11 +65,12 @@ class GarageService
 
             return $this->createMovement(
                 vehicle: $vehicle,
-                type: ParkingMovement::TYPE_PARKED,
+                type: $movementType,
                 fromParkingSpace: null,
                 toParkingSpace: $targetParkingSpace,
                 user: $user,
-                notes: $notes
+                notes: $notes,
+                rental: $rental
             );
         });
     }
@@ -149,12 +155,16 @@ class GarageService
     public function unpark(
         Vehicle $vehicle,
         User $user,
-        ?string $notes = null
+        ?string $notes = null,
+        ?Rental $rental = null,
+        string $movementType = ParkingMovement::TYPE_UNPARKED
     ): ParkingMovement {
         return DB::transaction(function () use (
             $vehicle,
             $user,
-            $notes
+            $notes,
+            $rental,
+            $movementType
         ) {
             $vehicle = Vehicle::query()
                 ->lockForUpdate()
@@ -179,11 +189,12 @@ class GarageService
 
             return $this->createMovement(
                 vehicle: $vehicle,
-                type: ParkingMovement::TYPE_UNPARKED,
+                type: $movementType,
                 fromParkingSpace: $fromParkingSpace,
                 toParkingSpace: null,
                 user: $user,
-                notes: $notes
+                notes: $notes,
+                rental: $rental
             );
         });
     }
@@ -306,13 +317,14 @@ class GarageService
         ?ParkingSpace $fromParkingSpace,
         ?ParkingSpace $toParkingSpace,
         User $user,
-        ?string $notes
+        ?string $notes,
+        ?Rental $rental = null
     ): ParkingMovement {
         $movement = ParkingMovement::create([
             'vehicle_id' => $vehicle->id,
             'vehicle_license_plate' => $vehicle->license_plate,
             'performed_by_user_id' => $user->id,
-            'rental_id' => null,
+            'rental_id' => $rental?->id,
             'type' => $type,
 
             'from_parking_space_id' => $fromParkingSpace?->id,

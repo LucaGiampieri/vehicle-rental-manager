@@ -8,13 +8,17 @@ use App\Http\Requests\Api\CompleteRentalRequest;
 use App\Http\Requests\Api\StoreRentalRequest;
 use App\Http\Requests\Api\UpdateRentalRequest;
 use App\Http\Resources\RentalResource;
+use App\Models\ParkingMovement;
+use App\Models\ParkingSpace;
 use App\Models\Rental;
 use App\Models\Vehicle;
+use App\Services\GarageService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
 class RentalController extends Controller
@@ -212,59 +216,85 @@ class RentalController extends Controller
     //Registra la consegna del mezzo e attiva il noleggio
     public function activate(
         ActivateRentalRequest $request,
-        Rental $rental
-    ): RentalResource {
+        Rental $rental,
+        GarageService $garageService
+    ): RentalResource|JsonResponse {
         $data = $request->validated();
+        $user = $request->user();
 
-        $rental = DB::transaction(function () use (
-            $rental,
-            $data
-        ): Rental {
-            //Blocca il noleggio mentre ne cambia lo stato
-            $lockedRental = Rental::query()
-                ->whereKey($rental->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+        try {
+            $rental = DB::transaction(function () use (
+                $rental,
+                $data,
+                $user,
+                $garageService
+            ): Rental {
+                //Blocca il noleggio mentre ne cambia lo stato
+                $lockedRental = Rental::query()
+                    ->whereKey($rental->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-            //Ripete il controllo per proteggere richieste simultanee
-            if (
-                $lockedRental->status
-                !== Rental::STATUS_RESERVED
-            ) {
-                throw ValidationException::withMessages([
-                    'rental' => [
-                        'Soltanto un noleggio prenotato può essere attivato.',
-                    ],
+                //Ripete il controllo per proteggere richieste simultanee
+                if (
+                    $lockedRental->status
+                    !== Rental::STATUS_RESERVED
+                ) {
+                    throw ValidationException::withMessages([
+                        'rental' => [
+                            'Soltanto un noleggio prenotato può essere attivato.',
+                        ],
+                    ]);
+                }
+
+                $updates = [
+                    'status' => Rental::STATUS_ACTIVE,
+
+                    //Registra l'ora reale della consegna
+                    'actual_starts_at' => now(),
+
+                    'start_mileage' => $data['start_mileage'],
+                ];
+
+                //Aggiorna pagamento e note soltanto se inviati
+                if (array_key_exists('amount_paid', $data)) {
+                    $updates['amount_paid'] = $data['amount_paid'];
+                }
+
+                if (array_key_exists('notes', $data)) {
+                    $updates['notes'] = $data['notes'];
+                }
+
+                $lockedRental->update($updates);
+
+                //Allinea il chilometraggio corrente del veicolo
+                $lockedRental->vehicle()->update([
+                    'mileage' => $data['start_mileage'],
                 ]);
-            }
 
-            $updates = [
-                'status' => Rental::STATUS_ACTIVE,
+                //Se il veicolo è in autorimessa, libera le sue celle
+                //e collega il movimento al noleggio appena iniziato.
+                $isParked = ParkingSpace::query()
+                    ->where('vehicle_id', $lockedRental->vehicle_id)
+                    ->exists();
 
-                //Registra l'ora reale della consegna
-                'actual_starts_at' => now(),
+                if ($isParked) {
+                    $garageService->unpark(
+                        vehicle: $lockedRental->vehicle,
+                        user: $user,
+                        notes: $data['notes'] ?? null,
+                        rental: $lockedRental,
+                        movementType: ParkingMovement::TYPE_RENTAL_DEPARTURE
+                    );
+                }
 
-                'start_mileage' => $data['start_mileage'],
-            ];
-
-            //Aggiorna pagamento e note soltanto se inviati
-            if (array_key_exists('amount_paid', $data)) {
-                $updates['amount_paid'] = $data['amount_paid'];
-            }
-
-            if (array_key_exists('notes', $data)) {
-                $updates['notes'] = $data['notes'];
-            }
-
-            $lockedRental->update($updates);
-
-            //Allinea il chilometraggio corrente del veicolo
-            $lockedRental->vehicle()->update([
-                'mileage' => $data['start_mileage'],
-            ]);
-
-            return $lockedRental;
-        });
+                return $lockedRental;
+            });
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], Response::HTTP_CONFLICT);
+        }
 
         $rental->load([
             'vehicle',
@@ -277,57 +307,84 @@ class RentalController extends Controller
     //Registra il rientro e completa il noleggio
     public function complete(
         CompleteRentalRequest $request,
-        Rental $rental
-    ): RentalResource {
+        Rental $rental,
+        GarageService $garageService
+    ): RentalResource|JsonResponse {
         $data = $request->validated();
+        $user = $request->user();
 
-        $rental = DB::transaction(function () use (
-            $rental,
-            $data
-        ): Rental {
-            $lockedRental = Rental::query()
-                ->whereKey($rental->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+        try {
+            $rental = DB::transaction(function () use (
+                $rental,
+                $data,
+                $user,
+                $garageService
+            ): Rental {
+                $lockedRental = Rental::query()
+                    ->whereKey($rental->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-            if (
-                $lockedRental->status
-                !== Rental::STATUS_ACTIVE
-            ) {
-                throw ValidationException::withMessages([
-                    'rental' => [
-                        'Soltanto un noleggio attivo multilineato può essere completato.',
-                    ],
+                if (
+                    $lockedRental->status
+                    !== Rental::STATUS_ACTIVE
+                ) {
+                    throw ValidationException::withMessages([
+                        'rental' => [
+                            'Soltanto un noleggio attivo può essere completato.',
+                        ],
+                    ]);
+                }
+
+                $updates = [
+                    'status' => Rental::STATUS_COMPLETED,
+
+                    //Se non viene fornito un orario usa quello attuale
+                    'actual_ends_at' => $data['actual_ends_at']
+                        ?? now(),
+
+                    'end_mileage' => $data['end_mileage'],
+                ];
+
+                if (array_key_exists('amount_paid', $data)) {
+                    $updates['amount_paid'] = $data['amount_paid'];
+                }
+
+                if (array_key_exists('notes', $data)) {
+                    $updates['notes'] = $data['notes'];
+                }
+
+                $lockedRental->update($updates);
+
+                //Salva sul mezzo il chilometraggio registrato al rientro
+                $lockedRental->vehicle()->update([
+                    'mileage' => $data['end_mileage'],
                 ]);
-            }
 
-            $updates = [
-                'status' => Rental::STATUS_COMPLETED,
+                //Se è stata scelta una cella, parcheggia il veicolo
+                //e collega il movimento al noleggio completato.
+                if (array_key_exists('parking_space_id', $data)) {
+                    $parkingSpace = ParkingSpace::findOrFail(
+                        $data['parking_space_id']
+                    );
 
-                //Se non viene fornito un orario usa quello attuale
-                'actual_ends_at' => $data['actual_ends_at']
-                    ?? now(),
+                    $garageService->park(
+                        vehicle: $lockedRental->vehicle,
+                        targetParkingSpace: $parkingSpace,
+                        user: $user,
+                        notes: $data['notes'] ?? null,
+                        rental: $lockedRental,
+                        movementType: ParkingMovement::TYPE_RENTAL_RETURN
+                    );
+                }
 
-                'end_mileage' => $data['end_mileage'],
-            ];
-
-            if (array_key_exists('amount_paid', $data)) {
-                $updates['amount_paid'] = $data['amount_paid'];
-            }
-
-            if (array_key_exists('notes', $data)) {
-                $updates['notes'] = $data['notes'];
-            }
-
-            $lockedRental->update($updates);
-
-            //Salva sul mezzo il chilometraggio registrato al rientro
-            $lockedRental->vehicle()->update([
-                'mileage' => $data['end_mileage'],
-            ]);
-
-            return $lockedRental;
-        });
+                return $lockedRental;
+            });
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], Response::HTTP_CONFLICT);
+        }
 
         $rental->load([
             'vehicle',
