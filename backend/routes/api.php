@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\RentalController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\ParkingSpaceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Crea tutte le rotte CRUD necessarie per gestire le spese
     Route::apiResource('expenses', ExpenseController::class);
+
+    //Crea le rotte CRUD per gestire le celle dell'autorimessa
+    Route::apiResource('parking-spaces', ParkingSpaceController::class);
 
     //Registra la consegna del mezzo
     Route::patch(
