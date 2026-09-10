@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\RentalController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\ParkingSpaceController;
+use App\Http\Controllers\Api\GarageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,36 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Crea le rotte CRUD per gestire le celle dell'autorimessa
     Route::apiResource('parking-spaces', ParkingSpaceController::class);
+
+    //Parcheggia un veicolo nel blocco che parte dalla cella selezionata
+    Route::post(
+        'garage/park',
+        [GarageController::class, 'park']
+    )->name('garage.park');
+
+    //Sposta un veicolo verso un nuovo blocco di celle
+    Route::patch(
+        'garage/vehicles/{vehicle}/move',
+        [GarageController::class, 'move']
+    )->name('garage.vehicles.move');
+
+    //Fa uscire il veicolo e libera tutte le sue celle
+    Route::patch(
+        'garage/vehicles/{vehicle}/unpark',
+        [GarageController::class, 'unpark']
+    )->name('garage.vehicles.unpark');
+
+    //Restituisce la cronologia generale dei movimenti
+    Route::get(
+        'garage/movements',
+        [GarageController::class, 'movements']
+    )->name('garage.movements.index');
+
+    //Restituisce la cronologia di uno specifico veicolo
+    Route::get(
+        'garage/vehicles/{vehicle}/movements',
+        [GarageController::class, 'vehicleMovements']
+    )->name('garage.vehicles.movements');
 
     //Registra la consegna del mezzo
     Route::patch(
