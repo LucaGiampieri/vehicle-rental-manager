@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\RentalController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\ParkingSpaceController;
 use App\Http\Controllers\Api\GarageController;
+use App\Http\Controllers\Api\DashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -57,6 +58,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         'garage/vehicles/{vehicle}/movements',
         [GarageController::class, 'vehicleMovements']
     )->name('garage.vehicles.movements');
+
+    //Restituisce il riepilogo economico e operativo
+    Route::get(
+        'dashboard',
+        [DashboardController::class, 'index']
+    )->name('dashboard.index');
 
     //Registra la consegna del mezzo
     Route::patch(
