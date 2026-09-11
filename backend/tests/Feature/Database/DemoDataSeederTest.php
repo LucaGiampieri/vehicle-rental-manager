@@ -9,6 +9,7 @@ use App\Models\Vehicle;
 use Database\Seeders\DemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Database\Seeders\DatabaseSeeder;
 
 class DemoDataSeederTest extends TestCase
 {
@@ -95,5 +96,22 @@ class DemoDataSeederTest extends TestCase
         $this->assertDatabaseCount('rentals', 4);
         $this->assertDatabaseCount('expenses', 5);
         $this->assertDatabaseCount('parking_movements', 3);
+    }
+
+    //Verifica che il Seeder principale non inserisca dati demo in produzione
+    public function test_demo_data_is_not_created_in_production(): void
+    {
+        //Simula l'ambiente di produzione
+        $this->app->detectEnvironment(
+            fn (): string => 'production'
+        );
+
+        //Esegue direttamente il Seeder principale
+        (new DatabaseSeeder())->run();
+
+        //L'account con password dimostrativa non deve essere creato
+        $this->assertDatabaseMissing('users', [
+            'email' => 'admin@example.com',
+        ]);
     }
 }

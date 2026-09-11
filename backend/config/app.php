@@ -54,6 +54,12 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    //Indirizzo del frontend React usato nei redirect e nelle email
+    'frontend_url' => env(
+        'FRONTEND_URL',
+        'http://localhost:5173'
+    ),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

@@ -6,6 +6,7 @@ use App\Models\ParkingMovement;
 use App\Models\ParkingSpace;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\Rental;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Laravel\Sanctum\Sanctum;
@@ -217,6 +218,49 @@ class GarageApiTest extends TestCase
             )->id,
         ])->assertConflict();
 
+        $this->assertDatabaseCount('parking_movements', 0);
+    }
+
+    //Un veicolo noleggiato non può essere parcheggiato manualmente
+    public function test_vehicle_with_active_rental_cannot_be_parked_manually(): void
+    {
+        $this->authenticateUser();
+
+        $spaces = $this->createGrid(1, 1);
+
+        $vehicle = Vehicle::factory()->create([
+            'parking_units' => 1,
+        ]);
+
+        Rental::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'status' => Rental::STATUS_ACTIVE,
+            'starts_at' => now()->subDay(),
+            'actual_starts_at' => now()->subDay(),
+            'expected_ends_at' => now()->addDay(),
+            'start_mileage' => $vehicle->mileage,
+        ]);
+
+        $parkingSpace = $this->spaceAt($spaces, 1, 1);
+
+        $response = $this->postJson('/api/garage/park', [
+            'vehicle_id' => $vehicle->id,
+            'parking_space_id' => $parkingSpace->id,
+        ]);
+
+        $response->assertConflict();
+
+        $response->assertJsonPath(
+            'message',
+            'Un veicolo con un noleggio attivo non può essere parcheggiato manualmente.'
+        );
+
+        //La cella deve essere rimasta vuota
+        $this->assertNull(
+            $parkingSpace->fresh()->vehicle_id
+        );
+
+        //Il tentativo fallito non deve creare movimenti
         $this->assertDatabaseCount('parking_movements', 0);
     }
 

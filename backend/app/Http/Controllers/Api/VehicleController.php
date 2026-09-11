@@ -9,6 +9,8 @@ use App\Http\Resources\VehicleResource;
 use App\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class VehicleController extends Controller
@@ -67,15 +69,58 @@ class VehicleController extends Controller
         return new VehicleResource($vehicle);
     }
 
-    //Modifica un veicolo esistente
+    ///Modifica un veicolo esistente
     public function update(
         UpdateVehicleRequest $request,
         Vehicle $vehicle
     ): VehicleResource {
-        //Aggiorna soltanto i campi validati e realmente inviati
-        $vehicle->update(
-            $request->validated()
-        );
+        $data = $request->validated();
+
+        /*
+         * La transazione e il blocco impediscono che il veicolo venga
+         * parcheggiato mentre ne stiamo modificando le dimensioni.
+         */
+        $vehicle = DB::transaction(function () use (
+            $vehicle,
+            $data
+        ): Vehicle {
+            $lockedVehicle = Vehicle::query()
+                ->whereKey($vehicle->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            //Un contachilometri non può diminuire
+            if (
+                array_key_exists('mileage', $data)
+                && $data['mileage'] < $lockedVehicle->mileage
+            ) {
+                throw ValidationException::withMessages([
+                    'mileage' => [
+                        'Il chilometraggio non può essere inferiore a quello attuale del veicolo.',
+                    ],
+                ]);
+            }
+
+            /*
+             * Le dimensioni non possono cambiare mentre il mezzo occupa
+             * delle celle, altrimenti il blocco diventerebbe incoerente.
+             */
+            if (
+                array_key_exists('parking_units', $data)
+                && $data['parking_units'] !== $lockedVehicle->parking_units
+                && $lockedVehicle->parkingSpaces()->exists()
+            ) {
+                throw ValidationException::withMessages([
+                    'parking_units' => [
+                        'Le dimensioni non possono essere modificate mentre il veicolo è parcheggiato.',
+                    ],
+                ]);
+            }
+
+            $lockedVehicle->update($data);
+
+            return $lockedVehicle;
+        });
 
         //Rilegge il veicolo e aggiorna i conteggi delle relazioni
         $vehicle->refresh();

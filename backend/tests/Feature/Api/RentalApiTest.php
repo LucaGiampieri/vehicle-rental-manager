@@ -570,6 +570,43 @@ class RentalApiTest extends TestCase
         );
     }
 
+    //Una prenotazione scaduta non può essere attivata
+    public function test_expired_reservation_cannot_be_activated(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create([
+            'mileage' => 30000,
+        ]);
+
+        $rental = Rental::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'status' => Rental::STATUS_RESERVED,
+            'starts_at' => now()->subDays(2),
+            'expected_ends_at' => now()->subDay(),
+            'actual_starts_at' => null,
+            'start_mileage' => null,
+        ]);
+
+        $response = $this->patchJson(
+            "/api/rentals/{$rental->id}/activate",
+            [
+                'start_mileage' => 30000,
+            ]
+        );
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['rental']);
+
+        //La prenotazione deve rimanere invariata
+        $this->assertSame(
+            Rental::STATUS_RESERVED,
+            $rental->fresh()->status
+        );
+
+        $this->assertNull($rental->fresh()->actual_starts_at);
+    }
+
     //Verifica il rientro e il completamento del noleggio
     public function test_active_rental_can_be_completed(): void
     {
@@ -654,6 +691,55 @@ class RentalApiTest extends TestCase
         $this->assertSame(
             Rental::STATUS_ACTIVE,
             $rental->fresh()->status
+        );
+    }
+
+    //Il rientro non può ridurre una lettura più recente del veicolo
+    public function test_rental_completion_cannot_reduce_vehicle_mileage(): void
+    {
+        $this->authenticateUser();
+
+        /*
+         * Il noleggio era iniziato a 50000 km, ma nel frattempo
+         * il veicolo possiede una lettura più recente di 52000 km.
+         */
+        $vehicle = Vehicle::factory()->create([
+            'mileage' => 52000,
+        ]);
+
+        $rental = Rental::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'status' => Rental::STATUS_ACTIVE,
+            'starts_at' => now()->subDays(2),
+            'actual_starts_at' => now()->subDays(2),
+            'expected_ends_at' => now()->addDay(),
+            'start_mileage' => 50000,
+            'end_mileage' => null,
+        ]);
+
+        //51000 supera l'inizio, ma ridurrebbe la lettura attuale di 52000
+        $response = $this->patchJson(
+            "/api/rentals/{$rental->id}/complete",
+            [
+                'end_mileage' => 51000,
+            ]
+        );
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['end_mileage']);
+
+        //Il noleggio deve essere rimasto attivo
+        $this->assertSame(
+            Rental::STATUS_ACTIVE,
+            $rental->fresh()->status
+        );
+
+        $this->assertNull($rental->fresh()->end_mileage);
+
+        //Anche il chilometraggio del veicolo deve rimanere invariato
+        $this->assertSame(
+            52000,
+            $vehicle->fresh()->mileage
         );
     }
 

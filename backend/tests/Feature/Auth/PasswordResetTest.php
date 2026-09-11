@@ -20,7 +20,23 @@ class PasswordResetTest extends TestCase
 
         $this->post('/forgot-password', ['email' => $user->email]);
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        //Controlla anche l'indirizzo inserito nell'email
+        Notification::assertSentTo(
+            $user,
+            ResetPassword::class,
+            function (ResetPassword $notification) use ($user): bool {
+                $expectedUrl = 'http://frontend.test/password-reset/'
+                    .$notification->token
+                    .'?email='.rawurlencode($user->email);
+
+                $this->assertSame(
+                    $expectedUrl,
+                    $notification->toMail($user)->actionUrl
+                );
+
+                return true;
+            }
+        );
     }
 
     public function test_password_can_be_reset_with_valid_token(): void

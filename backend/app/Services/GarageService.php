@@ -36,6 +36,25 @@ class GarageService
                 ->lockForUpdate()
                 ->findOrFail($vehicle->id);
 
+            /*
+            * Un parcheggio manuale non può riportare in autorimessa
+            * un veicolo che risulta ancora consegnato a un cliente.
+            *
+            * Durante il rientro ufficiale $rental non è null,
+            * quindi GarageService può completare normalmente l'operazione.
+            */
+            if (
+                $rental === null
+                && Rental::query()
+                    ->where('vehicle_id', $vehicle->id)
+                    ->where('status', Rental::STATUS_ACTIVE)
+                    ->exists()
+            ) {
+                throw new RuntimeException(
+                    'Un veicolo con un noleggio attivo non può essere parcheggiato manualmente.'
+                );
+            }
+
             //Impedisce di parcheggiare due volte lo stesso veicolo.
             $currentSpaces = $this->currentSpaces($vehicle);
 

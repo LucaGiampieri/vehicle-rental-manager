@@ -312,6 +312,48 @@ class ParkingSpaceApiTest extends TestCase
         ]);
     }
 
+    //Una cella occupata non può cambiare posizione
+    public function test_occupied_parking_space_cannot_change_position(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create();
+
+        $parkingSpace = ParkingSpace::factory()->create([
+            'zone' => 'main',
+            'row_number' => 1,
+            'column_number' => 1,
+            'vehicle_id' => $vehicle->id,
+            'is_active' => true,
+        ]);
+
+        //Prova a spostare direttamente la cella occupata
+        $response = $this->patchJson(
+            "/api/parking-spaces/{$parkingSpace->id}",
+            [
+                'zone' => 'secondary',
+                'row_number' => 2,
+                'column_number' => 2,
+            ]
+        );
+
+        $response->assertConflict();
+
+        $response->assertJsonPath(
+            'message',
+            'Una cella occupata non può cambiare posizione. Sposta o rimuovi prima il veicolo.'
+        );
+
+        //Posizione e occupazione devono essere rimaste invariate
+        $this->assertDatabaseHas('parking_spaces', [
+            'id' => $parkingSpace->id,
+            'zone' => 'main',
+            'row_number' => 1,
+            'column_number' => 1,
+            'vehicle_id' => $vehicle->id,
+        ]);
+    }
+
     //Una cella occupata non può essere disattivata.
     public function test_occupied_parking_space_cannot_be_deactivated(): void
     {

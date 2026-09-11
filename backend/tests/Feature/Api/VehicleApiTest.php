@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Expense;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\ParkingSpace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -203,6 +204,69 @@ class VehicleApiTest extends TestCase
             'daily_rate' => 48.50,
             'is_active' => false,
         ]);
+    }
+
+    //Verifica che il chilometraggio generale non possa diminuire
+    public function test_vehicle_mileage_cannot_be_reduced(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $vehicle = Vehicle::factory()->create([
+            'mileage' => 50000,
+        ]);
+
+        //Prova a inserire un chilometraggio inferiore
+        $response = $this->patchJson(
+            "/api/vehicles/{$vehicle->id}",
+            [
+                'mileage' => 49999,
+            ]
+        );
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['mileage']);
+
+        //Il valore originale deve essere rimasto invariato
+        $this->assertSame(
+            50000,
+            $vehicle->fresh()->mileage
+        );
+    }
+
+    //Verifica che un veicolo parcheggiato non possa cambiare dimensioni
+    public function test_parked_vehicle_cannot_change_parking_units(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $vehicle = Vehicle::factory()->create([
+            'parking_units' => 2,
+        ]);
+
+        //Simula le due celle occupate dal veicolo
+        ParkingSpace::factory()
+            ->count(2)
+            ->create([
+                'vehicle_id' => $vehicle->id,
+            ]);
+
+        //Prova a cambiare le dimensioni mentre il mezzo è parcheggiato
+        $response = $this->patchJson(
+            "/api/vehicles/{$vehicle->id}",
+            [
+                'parking_units' => 4,
+            ]
+        );
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['parking_units']);
+
+        //Il veicolo deve continuare a richiedere due celle
+        $this->assertSame(
+            2,
+            $vehicle->fresh()->parking_units
+        );
     }
 
     //Verifica che un utente autenticato possa eliminare un veicolo senza dati collegati

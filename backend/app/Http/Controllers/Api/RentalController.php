@@ -336,6 +336,26 @@ class RentalController extends Controller
                     ]);
                 }
 
+                //Blocca anche il veicolo durante l'aggiornamento del contachilometri
+                $lockedVehicle = Vehicle::query()
+                    ->whereKey($lockedRental->vehicle_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $minimumMileage = max(
+                    (int) $lockedRental->start_mileage,
+                    $lockedVehicle->mileage
+                );
+
+                //Ripete il controllo dentro la transazione
+                if ($data['end_mileage'] < $minimumMileage) {
+                    throw ValidationException::withMessages([
+                        'end_mileage' => [
+                            'Il chilometraggio finale non può essere inferiore all’ultima lettura registrata.',
+                        ],
+                    ]);
+                }
+
                 $updates = [
                     'status' => Rental::STATUS_COMPLETED,
 
@@ -357,9 +377,9 @@ class RentalController extends Controller
                 $lockedRental->update($updates);
 
                 //Salva sul mezzo il chilometraggio registrato al rientro
-                $lockedRental->vehicle()->update([
+                $lockedVehicle->update([
                     'mileage' => $data['end_mileage'],
-                ]);
+                    ]);
 
                 //Se è stata scelta una cella, parcheggia il veicolo
                 //e collega il movimento al noleggio completato.
@@ -369,7 +389,7 @@ class RentalController extends Controller
                     );
 
                     $garageService->park(
-                        vehicle: $lockedRental->vehicle,
+                        vehicle: $lockedVehicle,
                         targetParkingSpace: $parkingSpace,
                         user: $user,
                         notes: $data['notes'] ?? null,
@@ -398,15 +418,33 @@ class RentalController extends Controller
     public function cancel(
         Rental $rental
     ): RentalResource|JsonResponse {
-        if ($rental->status !== Rental::STATUS_RESERVED) {
+        try {
+            $rental = DB::transaction(function () use (
+                $rental
+            ): Rental {
+                //Blocca il noleggio durante il cambio di stato
+                $lockedRental = Rental::query()
+                    ->whereKey($rental->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($lockedRental->status !== Rental::STATUS_RESERVED) {
+                    throw new RuntimeException(
+                        'Soltanto un noleggio prenotato può essere annullato.'
+                    );
+                }
+
+                $lockedRental->update([
+                    'status' => Rental::STATUS_CANCELLED,
+                ]);
+
+                return $lockedRental;
+            });
+        } catch (RuntimeException $exception) {
             return response()->json([
-                'message' => 'Soltanto un noleggio prenotato può essere annullato.',
+                'message' => $exception->getMessage(),
             ], Response::HTTP_CONFLICT);
         }
-
-        $rental->update([
-            'status' => Rental::STATUS_CANCELLED,
-        ]);
 
         $rental->load([
             'vehicle',
@@ -419,28 +457,40 @@ class RentalController extends Controller
     //Elimina soltanto prenotazioni prive di pagamenti o noleggi annullati
     public function destroy(Rental $rental): Response
     {
-        $canBeDeleted = in_array(
-            $rental->status,
-            [
-                Rental::STATUS_RESERVED,
-                Rental::STATUS_CANCELLED,
-            ],
-            true
-        );
+        return DB::transaction(function () use (
+            $rental
+        ): Response {
+            //Blocca il noleggio durante il controllo e l'eliminazione
+            $lockedRental = Rental::query()
+                ->whereKey($rental->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        //I noleggi attivi o completati fanno parte dello storico
-        //Anche una prenotazione pagata deve essere conservata
-        if (
-            ! $canBeDeleted
-            || (float) $rental->amount_paid > 0
-        ) {
-            return response()->json([
-                'message' => 'Il noleggio non può essere eliminato perché è iniziato, completato oppure possiede pagamenti registrati.',
-            ], Response::HTTP_CONFLICT);
-        }
+            $canBeDeleted = in_array(
+                $lockedRental->status,
+                [
+                    Rental::STATUS_RESERVED,
+                    Rental::STATUS_CANCELLED,
+                ],
+                true
+            );
 
-        $rental->delete();
+            /*
+             * I noleggi attivi o completati fanno parte dello storico.
+             * Anche una prenotazione pagata deve essere conservata.
+             */
+            if (
+                ! $canBeDeleted
+                || (float) $lockedRental->amount_paid > 0
+            ) {
+                return response()->json([
+                    'message' => 'Il noleggio non può essere eliminato perché è iniziato, completato oppure possiede pagamenti registrati.',
+                ], Response::HTTP_CONFLICT);
+            }
 
-        return response()->noContent();
+            $lockedRental->delete();
+
+            return response()->noContent();
+        });
     }
 }

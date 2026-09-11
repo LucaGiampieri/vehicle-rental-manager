@@ -125,14 +125,19 @@ class CompleteRentalRequest extends FormRequest
                 return;
             }
 
-            //Il chilometraggio finale non può essere inferiore a quello iniziale
-            if (
-                $this->integer('end_mileage')
-                < $rental->start_mileage
-            ) {
+            /*
+            * Il chilometraggio finale deve rispettare sia quello iniziale
+            * del noleggio sia l'ultima lettura registrata sul veicolo.
+            */
+            $minimumMileage = max(
+                $rental->start_mileage,
+                $rental->vehicle->mileage
+            );
+
+            if ($this->integer('end_mileage') < $minimumMileage) {
                 $validator->errors()->add(
                     'end_mileage',
-                    'Il chilometraggio finale non può essere inferiore a quello iniziale.'
+                    'Il chilometraggio finale non può essere inferiore all’ultima lettura registrata.'
                 );
             }
 

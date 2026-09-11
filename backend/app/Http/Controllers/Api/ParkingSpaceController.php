@@ -9,6 +9,8 @@ use App\Http\Resources\ParkingSpaceResource;
 use App\Models\ParkingSpace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
 class ParkingSpaceController extends Controller
@@ -62,31 +64,70 @@ class ParkingSpaceController extends Controller
         return new ParkingSpaceResource($parkingSpace);
     }
 
-    //Modifica la struttura o le informazioni di una cella.
+    //Modifica la struttura o le informazioni di una cella
     public function update(
         UpdateParkingSpaceRequest $request,
         ParkingSpace $parkingSpace
     ): ParkingSpaceResource|JsonResponse {
-        /*
-         * Una cella occupata non può essere disattivata.
-         * Prima sarà necessario rimuovere o spostare il veicolo.
-         */
-        if (
-            $request->has('is_active')
-            && ! $request->boolean('is_active')
-            && $parkingSpace->vehicle_id !== null
-        ) {
+        $data = $request->validated();
+
+        try {
+            $parkingSpace = DB::transaction(function () use (
+                $parkingSpace,
+                $data
+            ): ParkingSpace {
+                //Blocca la cella durante il controllo e la modifica
+                $lockedParkingSpace = ParkingSpace::query()
+                    ->whereKey($parkingSpace->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $positionWasChanged =
+                    (
+                        array_key_exists('zone', $data)
+                        && $data['zone'] !== $lockedParkingSpace->zone
+                    )
+                    || (
+                        array_key_exists('row_number', $data)
+                        && (int) $data['row_number']
+                            !== $lockedParkingSpace->row_number
+                    )
+                    || (
+                        array_key_exists('column_number', $data)
+                        && (int) $data['column_number']
+                            !== $lockedParkingSpace->column_number
+                    );
+
+                if ($lockedParkingSpace->vehicle_id !== null) {
+                    //Una cella occupata non può essere disattivata
+                    if (
+                        array_key_exists('is_active', $data)
+                        && ! (bool) $data['is_active']
+                    ) {
+                        throw new RuntimeException(
+                            'Una cella occupata non può essere disattivata. Sposta o rimuovi prima il veicolo.'
+                        );
+                    }
+
+                    //La posizione fa parte del blocco occupato dal veicolo
+                    if ($positionWasChanged) {
+                        throw new RuntimeException(
+                            'Una cella occupata non può cambiare posizione. Sposta o rimuovi prima il veicolo.'
+                        );
+                    }
+                }
+
+                $lockedParkingSpace->update($data);
+
+                return $lockedParkingSpace;
+            });
+        } catch (RuntimeException $exception) {
             return response()->json([
-                'message' => 'Una cella occupata non può essere disattivata. Sposta o rimuovi prima il veicolo.',
+                'message' => $exception->getMessage(),
             ], Response::HTTP_CONFLICT);
         }
 
-        //Aggiorna soltanto i campi validati e realmente inviati.
-        $parkingSpace->update(
-            $request->validated()
-        );
-
-        //Rilegge la cella e il veicolo eventualmente collegato.
+        //Rilegge la cella e il veicolo eventualmente collegato
         $parkingSpace->refresh();
         $parkingSpace->load('vehicle');
 

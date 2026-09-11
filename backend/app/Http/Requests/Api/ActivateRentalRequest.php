@@ -55,10 +55,12 @@ class ActivateRentalRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            //Interrompe i controlli se esistono già errori
             if ($validator->errors()->isNotEmpty()) {
                 return;
             }
 
+            //Recupera il noleggio attraverso il Route Model Binding
             $rental = $this->route('rental');
 
             if (! $rental instanceof Rental) {
@@ -75,11 +77,22 @@ class ActivateRentalRequest extends FormRequest
                 return;
             }
 
+            //Salva l'ora attuale per utilizzarla nei controlli
+            $currentTime = now();
+
             //La consegna non può avvenire prima dell'inizio concordato
-            if (now()->lt($rental->starts_at)) {
+            if ($currentTime->lt($rental->starts_at)) {
                 $validator->errors()->add(
                     'rental',
                     'Il noleggio non può essere attivato prima della data iniziale.'
+                );
+            }
+
+            //Una prenotazione scaduta non può più essere attivata
+            if ($currentTime->gte($rental->expected_ends_at)) {
+                $validator->errors()->add(
+                    'rental',
+                    'Il periodo previsto del noleggio è già terminato.'
                 );
             }
 
@@ -99,7 +112,7 @@ class ActivateRentalRequest extends FormRequest
                 );
             }
 
-            //La patente deve essere ancora valida per tutto il periodo
+            //La patente deve essere valida per tutto il periodo
             if (
                 $rental->customer
                     ->driving_license_expiry_date
@@ -124,7 +137,7 @@ class ActivateRentalRequest extends FormRequest
                 );
             }
 
-            //Il pagamento non può superare il totale
+            //Il pagamento non può superare il totale concordato
             if (
                 $this->exists('amount_paid')
                 && (float) $this->input('amount_paid')
