@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
                     '/'
                 );
 
-                //Codifica correttamente caratteri come + e @ nell'email
+                // Codifica correttamente caratteri come + e @ nell'email
                 $email = rawurlencode(
                     $notifiable->getEmailForPasswordReset()
                 );

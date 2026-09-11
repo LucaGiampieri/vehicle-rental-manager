@@ -6,13 +6,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class MoveVehicleRequest extends FormRequest
 {
-    //L'accesso è già protetto dal middleware auth:sanctum.
+    // L'accesso è già protetto dal middleware auth:sanctum.
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza l'eventuale annotazione.
+    // Normalizza l'eventuale annotazione.
     protected function prepareForValidation(): void
     {
         if ($this->has('notes')) {
@@ -32,7 +32,7 @@ class MoveVehicleRequest extends FormRequest
         }
     }
 
-    //Dati necessari per indicare la nuova cella iniziale.
+    // Dati necessari per indicare la nuova cella iniziale.
     public function rules(): array
     {
         return [

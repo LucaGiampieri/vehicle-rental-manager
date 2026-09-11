@@ -11,13 +11,13 @@ use Illuminate\Validation\Validator;
 
 class UpdateRentalRequest extends FormRequest
 {
-    //Permette l'esecuzione della validazione
+    // Permette l'esecuzione della validazione
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza solamente le annotazioni realmente inviate
+    // Normalizza solamente le annotazioni realmente inviate
     protected function prepareForValidation(): void
     {
         $notes = $this->input('notes');
@@ -29,7 +29,7 @@ class UpdateRentalRequest extends FormRequest
         }
     }
 
-    //Definisce i campi modificabili
+    // Definisce i campi modificabili
     public function rules(): array
     {
         return [
@@ -78,7 +78,7 @@ class UpdateRentalRequest extends FormRequest
         ];
     }
 
-    //Esegue i controlli che coinvolgono il noleggio esistente
+    // Esegue i controlli che coinvolgono il noleggio esistente
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
@@ -94,8 +94,8 @@ class UpdateRentalRequest extends FormRequest
 
             $hasBookingChanges = $this->hasBookingChanges();
 
-            //Dopo la consegna non si possono cambiare mezzo, cliente,
-            //periodo o tariffa concordata
+            // Dopo la consegna non si possono cambiare mezzo, cliente,
+            // periodo o tariffa concordata
             if (
                 $rental->status !== Rental::STATUS_RESERVED
                 && $hasBookingChanges
@@ -108,7 +108,7 @@ class UpdateRentalRequest extends FormRequest
                 return;
             }
 
-            //Se cambiamo soltanto pagamento o note, il totale non varia
+            // Se cambiamo soltanto pagamento o note, il totale non varia
             if (! $hasBookingChanges) {
                 if (
                     $this->exists('amount_paid')
@@ -124,8 +124,8 @@ class UpdateRentalRequest extends FormRequest
                 return;
             }
 
-            //Usa il nuovo valore se è stato inviato,
-            //altrimenti mantiene quello già presente
+            // Usa il nuovo valore se è stato inviato,
+            // altrimenti mantiene quello già presente
             $vehicleId = $this->exists('vehicle_id')
                 ? $this->integer('vehicle_id')
                 : $rental->vehicle_id;
@@ -146,7 +146,7 @@ class UpdateRentalRequest extends FormRequest
                 ? $this->input('daily_rate')
                 : $rental->daily_rate;
 
-            //Una prenotazione modificata non può iniziare nel passato
+            // Una prenotazione modificata non può iniziare nel passato
             if ($startsAt->lte(now())) {
                 $validator->errors()->add(
                     'starts_at',
@@ -154,7 +154,7 @@ class UpdateRentalRequest extends FormRequest
                 );
             }
 
-            //La fine deve rimanere successiva all'inizio
+            // La fine deve rimanere successiva all'inizio
             if ($expectedEndsAt->lte($startsAt)) {
                 $validator->errors()->add(
                     'expected_ends_at',
@@ -197,7 +197,7 @@ class UpdateRentalRequest extends FormRequest
                 );
             }
 
-            //Esclude il noleggio stesso dal controllo
+            // Esclude il noleggio stesso dal controllo
             if (
                 Rental::hasOverlappingRental(
                     $vehicle->id,
@@ -231,7 +231,7 @@ class UpdateRentalRequest extends FormRequest
         });
     }
 
-    //Controlla se la richiesta modifica i dati della prenotazione
+    // Controlla se la richiesta modifica i dati della prenotazione
     private function hasBookingChanges(): bool
     {
         $bookingFields = [

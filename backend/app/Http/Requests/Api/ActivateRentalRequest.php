@@ -8,13 +8,13 @@ use Illuminate\Validation\Validator;
 
 class ActivateRentalRequest extends FormRequest
 {
-    //Permette l'esecuzione della validazione
+    // Permette l'esecuzione della validazione
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza le eventuali annotazioni
+    // Normalizza le eventuali annotazioni
     protected function prepareForValidation(): void
     {
         $notes = $this->input('notes');
@@ -26,7 +26,7 @@ class ActivateRentalRequest extends FormRequest
         }
     }
 
-    //Definisce i dati necessari per consegnare il mezzo
+    // Definisce i dati necessari per consegnare il mezzo
     public function rules(): array
     {
         return [
@@ -51,23 +51,23 @@ class ActivateRentalRequest extends FormRequest
         ];
     }
 
-    //Controlla lo stato del noleggio e i dati collegati
+    // Controlla lo stato del noleggio e i dati collegati
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            //Interrompe i controlli se esistono già errori
+            // Interrompe i controlli se esistono già errori
             if ($validator->errors()->isNotEmpty()) {
                 return;
             }
 
-            //Recupera il noleggio attraverso il Route Model Binding
+            // Recupera il noleggio attraverso il Route Model Binding
             $rental = $this->route('rental');
 
             if (! $rental instanceof Rental) {
                 return;
             }
 
-            //Soltanto una prenotazione può diventare attiva
+            // Soltanto una prenotazione può diventare attiva
             if ($rental->status !== Rental::STATUS_RESERVED) {
                 $validator->errors()->add(
                     'rental',
@@ -77,10 +77,10 @@ class ActivateRentalRequest extends FormRequest
                 return;
             }
 
-            //Salva l'ora attuale per utilizzarla nei controlli
+            // Salva l'ora attuale per utilizzarla nei controlli
             $currentTime = now();
 
-            //La consegna non può avvenire prima dell'inizio concordato
+            // La consegna non può avvenire prima dell'inizio concordato
             if ($currentTime->lt($rental->starts_at)) {
                 $validator->errors()->add(
                     'rental',
@@ -88,7 +88,7 @@ class ActivateRentalRequest extends FormRequest
                 );
             }
 
-            //Una prenotazione scaduta non può più essere attivata
+            // Una prenotazione scaduta non può più essere attivata
             if ($currentTime->gte($rental->expected_ends_at)) {
                 $validator->errors()->add(
                     'rental',
@@ -96,7 +96,7 @@ class ActivateRentalRequest extends FormRequest
                 );
             }
 
-            //Il veicolo deve essere ancora utilizzabile
+            // Il veicolo deve essere ancora utilizzabile
             if (! $rental->vehicle->is_active) {
                 $validator->errors()->add(
                     'vehicle_id',
@@ -104,7 +104,7 @@ class ActivateRentalRequest extends FormRequest
                 );
             }
 
-            //Il cliente deve essere ancora attivo
+            // Il cliente deve essere ancora attivo
             if (! $rental->customer->is_active) {
                 $validator->errors()->add(
                     'customer_id',
@@ -112,7 +112,7 @@ class ActivateRentalRequest extends FormRequest
                 );
             }
 
-            //La patente deve essere valida per tutto il periodo
+            // La patente deve essere valida per tutto il periodo
             if (
                 $rental->customer
                     ->driving_license_expiry_date
@@ -126,7 +126,7 @@ class ActivateRentalRequest extends FormRequest
                 );
             }
 
-            //Il chilometraggio non può diminuire rispetto al veicolo
+            // Il chilometraggio non può diminuire rispetto al veicolo
             if (
                 $this->integer('start_mileage')
                 < $rental->vehicle->mileage
@@ -137,7 +137,7 @@ class ActivateRentalRequest extends FormRequest
                 );
             }
 
-            //Il pagamento non può superare il totale concordato
+            // Il pagamento non può superare il totale concordato
             if (
                 $this->exists('amount_paid')
                 && (float) $this->input('amount_paid')

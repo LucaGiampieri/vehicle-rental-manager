@@ -18,19 +18,19 @@ class RentalResource extends JsonResource
         return [
             'id' => $this->id,
 
-            //Identificativi utilizzabili nei form
+            // Identificativi utilizzabili nei form
             'vehicle_id' => $this->vehicle_id,
             'customer_id' => $this->customer_id,
 
             'status' => $this->status,
 
-            //Periodo previsto ed effettivo
+            // Periodo previsto ed effettivo
             'starts_at' => $this->starts_at?->toISOString(),
             'actual_starts_at' => $this->actual_starts_at?->toISOString(),
             'expected_ends_at' => $this->expected_ends_at?->toISOString(),
             'actual_ends_at' => $this->actual_ends_at?->toISOString(),
 
-            //Dati economici
+            // Dati economici
             'daily_rate' => $this->daily_rate,
             'chargeable_days' => Rental::calculateChargeableDays(
                 $this->starts_at,
@@ -49,13 +49,13 @@ class RentalResource extends JsonResource
                 ''
             ),
 
-            //Chilometraggi alla consegna e al rientro
+            // Chilometraggi alla consegna e al rientro
             'start_mileage' => $this->start_mileage,
             'end_mileage' => $this->end_mileage,
 
             'notes' => $this->notes,
 
-            //Riepilogo del mezzo, senza esporre inutilmente tutti i dati
+            // Riepilogo del mezzo, senza esporre inutilmente tutti i dati
             'vehicle' => $this->whenLoaded(
                 'vehicle',
                 fn () => [
@@ -67,7 +67,7 @@ class RentalResource extends JsonResource
                 ]
             ),
 
-            //Riepilogo del cliente associato
+            // Riepilogo del cliente associato
             'customer' => $this->whenLoaded(
                 'customer',
                 fn () => [

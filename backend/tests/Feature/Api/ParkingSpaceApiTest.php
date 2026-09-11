@@ -13,7 +13,7 @@ class ParkingSpaceApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Crea e autentica un utente per i test protetti.
+    // Crea e autentica un utente per i test protetti.
     private function authenticateUser(): void
     {
         Sanctum::actingAs(
@@ -21,7 +21,7 @@ class ParkingSpaceApiTest extends TestCase
         );
     }
 
-    //Restituisce dati validi, modificabili attraverso $overrides.
+    // Restituisce dati validi, modificabili attraverso $overrides.
     private function validParkingSpaceData(
         array $overrides = []
     ): array {
@@ -35,7 +35,7 @@ class ParkingSpaceApiTest extends TestCase
         ], $overrides);
     }
 
-    //Verifica che un ospite non possa accedere alle celle.
+    // Verifica che un ospite non possa accedere alle celle.
     public function test_guest_cannot_access_parking_spaces(): void
     {
         $response = $this->getJson('/api/parking-spaces');
@@ -43,7 +43,7 @@ class ParkingSpaceApiTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    //Verifica che un utente autenticato possa visualizzare la mappa.
+    // Verifica che un utente autenticato possa visualizzare la mappa.
     public function test_authenticated_user_can_list_parking_spaces(): void
     {
         $this->authenticateUser();
@@ -77,7 +77,7 @@ class ParkingSpaceApiTest extends TestCase
         ]);
     }
 
-    //Verifica la creazione e la normalizzazione dei dati.
+    // Verifica la creazione e la normalizzazione dei dati.
     public function test_authenticated_user_can_create_parking_space(): void
     {
         $this->authenticateUser();
@@ -114,7 +114,7 @@ class ParkingSpaceApiTest extends TestCase
         ]);
     }
 
-    //Verifica che i dati non validi vengano rifiutati.
+    // Verifica che i dati non validi vengano rifiutati.
     public function test_parking_space_creation_requires_valid_data(): void
     {
         $this->authenticateUser();
@@ -145,7 +145,7 @@ class ParkingSpaceApiTest extends TestCase
         $this->assertDatabaseCount('parking_spaces', 0);
     }
 
-    //Verifica che etichetta e posizione non possano essere duplicate.
+    // Verifica che etichetta e posizione non possano essere duplicate.
     public function test_label_and_position_cannot_be_duplicated(): void
     {
         $this->authenticateUser();
@@ -184,7 +184,7 @@ class ParkingSpaceApiTest extends TestCase
         $this->assertDatabaseCount('parking_spaces', 1);
     }
 
-    //Le stesse coordinate possono esistere in zone differenti.
+    // Le stesse coordinate possono esistere in zone differenti.
     public function test_same_position_can_exist_in_different_zones(): void
     {
         $this->authenticateUser();
@@ -209,7 +209,7 @@ class ParkingSpaceApiTest extends TestCase
         $this->assertDatabaseCount('parking_spaces', 2);
     }
 
-    //Verifica il dettaglio di una cella occupata.
+    // Verifica il dettaglio di una cella occupata.
     public function test_authenticated_user_can_view_parking_space(): void
     {
         $this->authenticateUser();
@@ -240,7 +240,7 @@ class ParkingSpaceApiTest extends TestCase
         );
     }
 
-    //Verifica che una cella vuota possa essere modificata.
+    // Verifica che una cella vuota possa essere modificata.
     public function test_authenticated_user_can_update_parking_space(): void
     {
         $this->authenticateUser();
@@ -281,7 +281,7 @@ class ParkingSpaceApiTest extends TestCase
         ]);
     }
 
-    //Verifica la posizione completa anche modificando soltanto la zona.
+    // Verifica la posizione completa anche modificando soltanto la zona.
     public function test_parking_space_cannot_move_onto_existing_position(): void
     {
         $this->authenticateUser();
@@ -312,7 +312,7 @@ class ParkingSpaceApiTest extends TestCase
         ]);
     }
 
-    //Una cella occupata non può cambiare posizione
+    // Una cella occupata non può cambiare posizione
     public function test_occupied_parking_space_cannot_change_position(): void
     {
         $this->authenticateUser();
@@ -327,7 +327,7 @@ class ParkingSpaceApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        //Prova a spostare direttamente la cella occupata
+        // Prova a spostare direttamente la cella occupata
         $response = $this->patchJson(
             "/api/parking-spaces/{$parkingSpace->id}",
             [
@@ -344,7 +344,7 @@ class ParkingSpaceApiTest extends TestCase
             'Una cella occupata non può cambiare posizione. Sposta o rimuovi prima il veicolo.'
         );
 
-        //Posizione e occupazione devono essere rimaste invariate
+        // Posizione e occupazione devono essere rimaste invariate
         $this->assertDatabaseHas('parking_spaces', [
             'id' => $parkingSpace->id,
             'zone' => 'main',
@@ -354,7 +354,7 @@ class ParkingSpaceApiTest extends TestCase
         ]);
     }
 
-    //Una cella occupata non può essere disattivata.
+    // Una cella occupata non può essere disattivata.
     public function test_occupied_parking_space_cannot_be_deactivated(): void
     {
         $this->authenticateUser();
@@ -380,7 +380,7 @@ class ParkingSpaceApiTest extends TestCase
         ]);
     }
 
-    //Verifica che una cella vuota possa essere eliminata.
+    // Verifica che una cella vuota possa essere eliminata.
     public function test_empty_parking_space_can_be_deleted(): void
     {
         $this->authenticateUser();
@@ -400,7 +400,7 @@ class ParkingSpaceApiTest extends TestCase
         ]);
     }
 
-    //Verifica che una cella occupata non possa essere eliminata.
+    // Verifica che una cella occupata non possa essere eliminata.
     public function test_occupied_parking_space_cannot_be_deleted(): void
     {
         $this->authenticateUser();

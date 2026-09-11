@@ -23,11 +23,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RentalController extends Controller
 {
-    //Restituisce l'elenco paginato dei noleggi
+    // Restituisce l'elenco paginato dei noleggi
     public function index(): AnonymousResourceCollection
     {
-        //Carica insieme al noleggio anche veicolo e cliente
-        //per evitare query aggiuntive durante la creazione del JSON
+        // Carica insieme al noleggio anche veicolo e cliente
+        // per evitare query aggiuntive durante la creazione del JSON
         $rentals = Rental::query()
             ->with([
                 'vehicle',
@@ -39,19 +39,19 @@ class RentalController extends Controller
         return RentalResource::collection($rentals);
     }
 
-    //Crea una nuova prenotazione
+    // Crea una nuova prenotazione
     public function store(StoreRentalRequest $request): JsonResponse
     {
-        //Recupera soltanto i dati che hanno superato la validazione
+        // Recupera soltanto i dati che hanno superato la validazione
         $data = $request->validated();
 
-        //Trasforma le date ricevute in oggetti Carbon
+        // Trasforma le date ricevute in oggetti Carbon
         $startsAt = Carbon::parse($data['starts_at']);
         $expectedEndsAt = Carbon::parse(
             $data['expected_ends_at']
         );
 
-        //Imposta i valori controllati esclusivamente dal backend
+        // Imposta i valori controllati esclusivamente dal backend
         $data['status'] = Rental::STATUS_RESERVED;
         $data['actual_starts_at'] = null;
         $data['actual_ends_at'] = null;
@@ -59,27 +59,27 @@ class RentalController extends Controller
         $data['end_mileage'] = null;
         $data['amount_paid'] = $data['amount_paid'] ?? 0;
 
-        //Calcola il prezzo senza accettare un totale deciso dal frontend
+        // Calcola il prezzo senza accettare un totale deciso dal frontend
         $data['total_amount'] = Rental::calculateTotalAmount(
             $startsAt,
             $expectedEndsAt,
             $data['daily_rate']
         );
 
-        //La transazione evita che due richieste contemporanee
-        //prenotino lo stesso mezzo nello stesso periodo
+        // La transazione evita che due richieste contemporanee
+        // prenotino lo stesso mezzo nello stesso periodo
         $rental = DB::transaction(function () use (
             $data,
             $startsAt,
             $expectedEndsAt
         ): Rental {
-            //Blocca temporaneamente il record del veicolo
+            // Blocca temporaneamente il record del veicolo
             Vehicle::query()
                 ->whereKey($data['vehicle_id'])
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            //Ripete il controllo dentro la transazione
+            // Ripete il controllo dentro la transazione
             if (
                 Rental::hasOverlappingRental(
                     $data['vehicle_id'],
@@ -97,19 +97,19 @@ class RentalController extends Controller
             return Rental::create($data);
         });
 
-        //Carica i dati riassuntivi collegati
+        // Carica i dati riassuntivi collegati
         $rental->load([
             'vehicle',
             'customer',
         ]);
 
-        //Restituisce il noleggio con 201 Created
+        // Restituisce il noleggio con 201 Created
         return (new RentalResource($rental))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    //Restituisce un singolo noleggio
+    // Restituisce un singolo noleggio
     public function show(Rental $rental): RentalResource
     {
         $rental->load([
@@ -120,14 +120,14 @@ class RentalController extends Controller
         return new RentalResource($rental);
     }
 
-    //Modifica i dati consentiti di un noleggio
+    // Modifica i dati consentiti di un noleggio
     public function update(
         UpdateRentalRequest $request,
         Rental $rental
     ): RentalResource {
         $data = $request->validated();
 
-        //Campi che modificano periodo, mezzo, cliente o prezzo
+        // Campi che modificano periodo, mezzo, cliente o prezzo
         $bookingFields = [
             'vehicle_id',
             'customer_id',
@@ -136,15 +136,15 @@ class RentalController extends Controller
             'daily_rate',
         ];
 
-        //Controlla se almeno uno dei campi principali è stato inviato
+        // Controlla se almeno uno dei campi principali è stato inviato
         $hasBookingChanges = array_intersect(
             $bookingFields,
             array_keys($data)
         ) !== [];
 
         if ($hasBookingChanges) {
-            //Usa i nuovi valori quando presenti,
-            //altrimenti mantiene quelli del noleggio
+            // Usa i nuovi valori quando presenti,
+            // altrimenti mantiene quelli del noleggio
             $vehicleId = $data['vehicle_id']
                 ?? $rental->vehicle_id;
 
@@ -162,14 +162,14 @@ class RentalController extends Controller
             $dailyRate = $data['daily_rate']
                 ?? $rental->daily_rate;
 
-            //Ricalcola automaticamente il totale
+            // Ricalcola automaticamente il totale
             $data['total_amount'] = Rental::calculateTotalAmount(
                 $startsAt,
                 $expectedEndsAt,
                 $dailyRate
             );
 
-            //Protegge anche la modifica da richieste contemporanee
+            // Protegge anche la modifica da richieste contemporanee
             DB::transaction(function () use (
                 $rental,
                 $data,
@@ -200,7 +200,7 @@ class RentalController extends Controller
                 $rental->update($data);
             });
         } else {
-            //Pagamento e note non richiedono di ricalcolare il periodo
+            // Pagamento e note non richiedono di ricalcolare il periodo
             $rental->update($data);
         }
 
@@ -213,7 +213,7 @@ class RentalController extends Controller
         return new RentalResource($rental);
     }
 
-    //Registra la consegna del mezzo e attiva il noleggio
+    // Registra la consegna del mezzo e attiva il noleggio
     public function activate(
         ActivateRentalRequest $request,
         Rental $rental,
@@ -229,13 +229,13 @@ class RentalController extends Controller
                 $user,
                 $garageService
             ): Rental {
-                //Blocca il noleggio mentre ne cambia lo stato
+                // Blocca il noleggio mentre ne cambia lo stato
                 $lockedRental = Rental::query()
                     ->whereKey($rental->id)
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                //Ripete il controllo per proteggere richieste simultanee
+                // Ripete il controllo per proteggere richieste simultanee
                 if (
                     $lockedRental->status
                     !== Rental::STATUS_RESERVED
@@ -250,13 +250,13 @@ class RentalController extends Controller
                 $updates = [
                     'status' => Rental::STATUS_ACTIVE,
 
-                    //Registra l'ora reale della consegna
+                    // Registra l'ora reale della consegna
                     'actual_starts_at' => now(),
 
                     'start_mileage' => $data['start_mileage'],
                 ];
 
-                //Aggiorna pagamento e note soltanto se inviati
+                // Aggiorna pagamento e note soltanto se inviati
                 if (array_key_exists('amount_paid', $data)) {
                     $updates['amount_paid'] = $data['amount_paid'];
                 }
@@ -267,13 +267,13 @@ class RentalController extends Controller
 
                 $lockedRental->update($updates);
 
-                //Allinea il chilometraggio corrente del veicolo
+                // Allinea il chilometraggio corrente del veicolo
                 $lockedRental->vehicle()->update([
                     'mileage' => $data['start_mileage'],
                 ]);
 
-                //Se il veicolo è in autorimessa, libera le sue celle
-                //e collega il movimento al noleggio appena iniziato.
+                // Se il veicolo è in autorimessa, libera le sue celle
+                // e collega il movimento al noleggio appena iniziato.
                 $isParked = ParkingSpace::query()
                     ->where('vehicle_id', $lockedRental->vehicle_id)
                     ->exists();
@@ -304,7 +304,7 @@ class RentalController extends Controller
         return new RentalResource($rental);
     }
 
-    //Registra il rientro e completa il noleggio
+    // Registra il rientro e completa il noleggio
     public function complete(
         CompleteRentalRequest $request,
         Rental $rental,
@@ -336,7 +336,7 @@ class RentalController extends Controller
                     ]);
                 }
 
-                //Blocca anche il veicolo durante l'aggiornamento del contachilometri
+                // Blocca anche il veicolo durante l'aggiornamento del contachilometri
                 $lockedVehicle = Vehicle::query()
                     ->whereKey($lockedRental->vehicle_id)
                     ->lockForUpdate()
@@ -347,7 +347,7 @@ class RentalController extends Controller
                     $lockedVehicle->mileage
                 );
 
-                //Ripete il controllo dentro la transazione
+                // Ripete il controllo dentro la transazione
                 if ($data['end_mileage'] < $minimumMileage) {
                     throw ValidationException::withMessages([
                         'end_mileage' => [
@@ -359,7 +359,7 @@ class RentalController extends Controller
                 $updates = [
                     'status' => Rental::STATUS_COMPLETED,
 
-                    //Se non viene fornito un orario usa quello attuale
+                    // Se non viene fornito un orario usa quello attuale
                     'actual_ends_at' => $data['actual_ends_at']
                         ?? now(),
 
@@ -376,13 +376,13 @@ class RentalController extends Controller
 
                 $lockedRental->update($updates);
 
-                //Salva sul mezzo il chilometraggio registrato al rientro
+                // Salva sul mezzo il chilometraggio registrato al rientro
                 $lockedVehicle->update([
                     'mileage' => $data['end_mileage'],
-                    ]);
+                ]);
 
-                //Se è stata scelta una cella, parcheggia il veicolo
-                //e collega il movimento al noleggio completato.
+                // Se è stata scelta una cella, parcheggia il veicolo
+                // e collega il movimento al noleggio completato.
                 if (array_key_exists('parking_space_id', $data)) {
                     $parkingSpace = ParkingSpace::findOrFail(
                         $data['parking_space_id']
@@ -414,7 +414,7 @@ class RentalController extends Controller
         return new RentalResource($rental);
     }
 
-    //Annulla una prenotazione non ancora iniziata
+    // Annulla una prenotazione non ancora iniziata
     public function cancel(
         Rental $rental
     ): RentalResource|JsonResponse {
@@ -422,7 +422,7 @@ class RentalController extends Controller
             $rental = DB::transaction(function () use (
                 $rental
             ): Rental {
-                //Blocca il noleggio durante il cambio di stato
+                // Blocca il noleggio durante il cambio di stato
                 $lockedRental = Rental::query()
                     ->whereKey($rental->id)
                     ->lockForUpdate()
@@ -454,13 +454,13 @@ class RentalController extends Controller
         return new RentalResource($rental);
     }
 
-    //Elimina soltanto prenotazioni prive di pagamenti o noleggi annullati
+    // Elimina soltanto prenotazioni prive di pagamenti o noleggi annullati
     public function destroy(Rental $rental): Response
     {
         return DB::transaction(function () use (
             $rental
         ): Response {
-            //Blocca il noleggio durante il controllo e l'eliminazione
+            // Blocca il noleggio durante il controllo e l'eliminazione
             $lockedRental = Rental::query()
                 ->whereKey($rental->id)
                 ->lockForUpdate()

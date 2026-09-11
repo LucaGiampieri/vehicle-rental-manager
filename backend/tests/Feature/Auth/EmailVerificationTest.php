@@ -30,7 +30,7 @@ class EmailVerificationTest extends TestCase
         Event::assertDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
 
-        //Verifica che Laravel reindirizzi realmente verso React
+        // Verifica che Laravel reindirizzi realmente verso React
         $response->assertRedirect(
             'http://frontend.test/dashboard?verified=1'
         );

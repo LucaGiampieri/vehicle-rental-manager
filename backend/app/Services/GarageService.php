@@ -14,7 +14,7 @@ use RuntimeException;
 
 class GarageService
 {
-    //Parcheggia un veicolo partendo dalla cella scelta.
+    // Parcheggia un veicolo partendo dalla cella scelta.
     public function park(
         Vehicle $vehicle,
         ParkingSpace $targetParkingSpace,
@@ -31,7 +31,7 @@ class GarageService
             $rental,
             $movementType
         ) {
-            //Blocca il veicolo durante l'operazione.
+            // Blocca il veicolo durante l'operazione.
             $vehicle = Vehicle::query()
                 ->lockForUpdate()
                 ->findOrFail($vehicle->id);
@@ -55,7 +55,7 @@ class GarageService
                 );
             }
 
-            //Impedisce di parcheggiare due volte lo stesso veicolo.
+            // Impedisce di parcheggiare due volte lo stesso veicolo.
             $currentSpaces = $this->currentSpaces($vehicle);
 
             if ($currentSpaces->isNotEmpty()) {
@@ -64,18 +64,18 @@ class GarageService
                 );
             }
 
-            //Rilegge e blocca la cella iniziale richiesta.
+            // Rilegge e blocca la cella iniziale richiesta.
             $targetParkingSpace = ParkingSpace::query()
                 ->lockForUpdate()
                 ->findOrFail($targetParkingSpace->id);
 
-            //Trova tutto il blocco necessario al veicolo.
+            // Trova tutto il blocco necessario al veicolo.
             $targetSpaces = $this->requiredSpaces(
                 $vehicle,
                 $targetParkingSpace
             );
 
-            //Occupa tutte le celle del blocco.
+            // Occupa tutte le celle del blocco.
             ParkingSpace::query()
                 ->whereKey($targetSpaces->modelKeys())
                 ->update([
@@ -94,7 +94,7 @@ class GarageService
         });
     }
 
-    //Sposta un veicolo già parcheggiato verso un nuovo blocco.
+    // Sposta un veicolo già parcheggiato verso un nuovo blocco.
     public function move(
         Vehicle $vehicle,
         ParkingSpace $targetParkingSpace,
@@ -111,7 +111,7 @@ class GarageService
                 ->lockForUpdate()
                 ->findOrFail($vehicle->id);
 
-            //Recupera e blocca le celle attualmente occupate.
+            // Recupera e blocca le celle attualmente occupate.
             $currentSpaces = $this->currentSpaces($vehicle);
 
             if ($currentSpaces->isEmpty()) {
@@ -120,7 +120,7 @@ class GarageService
                 );
             }
 
-            //La prima cella ordinata rappresenta l'inizio del vecchio blocco.
+            // La prima cella ordinata rappresenta l'inizio del vecchio blocco.
             $fromParkingSpace = $currentSpaces->first();
 
             $targetParkingSpace = ParkingSpace::query()
@@ -132,7 +132,7 @@ class GarageService
                 $targetParkingSpace
             );
 
-            //Confronta le celle per impedire uno spostamento verso lo stesso blocco.
+            // Confronta le celle per impedire uno spostamento verso lo stesso blocco.
             $currentIds = $currentSpaces->modelKeys();
             $targetIds = $targetSpaces->modelKeys();
 
@@ -145,14 +145,14 @@ class GarageService
                 );
             }
 
-            //Libera il vecchio blocco.
+            // Libera il vecchio blocco.
             ParkingSpace::query()
                 ->whereKey($currentIds)
                 ->update([
                     'vehicle_id' => null,
                 ]);
 
-            //Occupa il nuovo blocco.
+            // Occupa il nuovo blocco.
             ParkingSpace::query()
                 ->whereKey($targetIds)
                 ->update([
@@ -170,7 +170,7 @@ class GarageService
         });
     }
 
-    //Rimuove dall'autorimessa un veicolo parcheggiato.
+    // Rimuove dall'autorimessa un veicolo parcheggiato.
     public function unpark(
         Vehicle $vehicle,
         User $user,
@@ -199,7 +199,7 @@ class GarageService
 
             $fromParkingSpace = $currentSpaces->first();
 
-            //Libera tutte le celle occupate dal veicolo.
+            // Libera tutte le celle occupate dal veicolo.
             ParkingSpace::query()
                 ->whereKey($currentSpaces->modelKeys())
                 ->update([
@@ -218,7 +218,7 @@ class GarageService
         });
     }
 
-    //Recupera e blocca le celle occupate attualmente dal veicolo.
+    // Recupera e blocca le celle occupate attualmente dal veicolo.
     private function currentSpaces(Vehicle $vehicle): Collection
     {
         return ParkingSpace::query()
@@ -230,7 +230,7 @@ class GarageService
             ->get();
     }
 
-    //Trova il blocco rettangolare necessario al veicolo.
+    // Trova il blocco rettangolare necessario al veicolo.
     private function requiredSpaces(
         Vehicle $vehicle,
         ParkingSpace $startingSpace
@@ -240,7 +240,7 @@ class GarageService
 
         $positions = [];
 
-        //Genera tutte le coordinate richieste dal blocco.
+        // Genera tutte le coordinate richieste dal blocco.
         for ($rowOffset = 0; $rowOffset < $requiredRows; $rowOffset++) {
             for (
                 $columnOffset = 0;
@@ -254,7 +254,7 @@ class GarageService
             }
         }
 
-        //Recupera le celle corrispondenti nella stessa zona.
+        // Recupera le celle corrispondenti nella stessa zona.
         $spaces = ParkingSpace::query()
             ->where('zone', $startingSpace->zone)
             ->where(function (Builder $query) use ($positions) {
@@ -278,14 +278,14 @@ class GarageService
 
         $requiredCount = $requiredRows * $requiredColumns;
 
-        //Il blocco deve contenere tutte le coordinate richieste.
+        // Il blocco deve contenere tutte le coordinate richieste.
         if ($spaces->count() !== $requiredCount) {
             throw new RuntimeException(
                 'Il blocco selezionato non contiene tutte le celle necessarie.'
             );
         }
 
-        //Tutte le celle devono essere utilizzabili.
+        // Tutte le celle devono essere utilizzabili.
         if (
             $spaces->contains(
                 fn (ParkingSpace $space) => ! $space->is_active
@@ -302,8 +302,7 @@ class GarageService
          */
         if (
             $spaces->contains(
-                fn (ParkingSpace $space) =>
-                    $space->vehicle_id !== null
+                fn (ParkingSpace $space) => $space->vehicle_id !== null
                     && (int) $space->vehicle_id !== (int) $vehicle->id
             )
         ) {
@@ -315,7 +314,7 @@ class GarageService
         return $spaces;
     }
 
-    //Stabilisce la forma del blocco in base alle dimensioni del veicolo.
+    // Stabilisce la forma del blocco in base alle dimensioni del veicolo.
     private function blockDimensions(int $parkingUnits): array
     {
         return match ($parkingUnits) {
@@ -329,7 +328,7 @@ class GarageService
         };
     }
 
-    //Registra la fotografia storica del movimento.
+    // Registra la fotografia storica del movimento.
     private function createMovement(
         Vehicle $vehicle,
         string $type,
@@ -361,7 +360,7 @@ class GarageService
             'occurred_at' => now(),
         ]);
 
-        //Prepara le relazioni utilizzate dal Resource.
+        // Prepara le relazioni utilizzate dal Resource.
         $movement->load([
             'vehicle',
             'performedBy',

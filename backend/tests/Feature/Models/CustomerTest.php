@@ -10,18 +10,18 @@ use Tests\TestCase;
 
 class CustomerTest extends TestCase
 {
-    //Ricrea il database di test per ogni metodo
+    // Ricrea il database di test per ogni metodo
     use RefreshDatabase;
 
     public function test_customer_can_be_created_using_the_factory_data(): void
     {
-        //Genera i dati con la Factory e li salva tramite i campi fillable
+        // Genera i dati con la Factory e li salva tramite i campi fillable
         $customer = Customer::create(
             Customer::factory()
                 ->raw()
         );
 
-        //Controlla che il cliente sia stato inserito nel database
+        // Controlla che il cliente sia stato inserito nel database
         $this->assertDatabaseHas('customers', [
             'id' => $customer->id,
             'email' => $customer->email,
@@ -29,11 +29,11 @@ class CustomerTest extends TestCase
             'is_active' => 1,
         ]);
 
-        //Controlla che la Factory generi identificativi della lunghezza prevista
+        // Controlla che la Factory generi identificativi della lunghezza prevista
         $this->assertSame(16, strlen($customer->tax_code));
         $this->assertSame(10, strlen($customer->driving_license_number));
 
-        //Controlla le conversioni automatiche definite nel Model
+        // Controlla le conversioni automatiche definite nel Model
         $this->assertInstanceOf(Carbon::class, $customer->birth_date);
         $this->assertInstanceOf(
             Carbon::class,
@@ -44,8 +44,8 @@ class CustomerTest extends TestCase
 
     public function test_optional_fields_can_be_null(): void
     {
-        //Crea due clienti senza i dati facoltativi
-        //Questo verifica anche che unique permetta più valori null
+        // Crea due clienti senza i dati facoltativi
+        // Questo verifica anche che unique permetta più valori null
         $firstCustomer = Customer::factory()
             ->create([
                 'birth_date' => null,
@@ -66,7 +66,7 @@ class CustomerTest extends TestCase
                 'notes' => null,
             ]);
 
-        //Controlla che entrambi i clienti siano stati salvati
+        // Controlla che entrambi i clienti siano stati salvati
         $this->assertDatabaseCount('customers', 2);
         $this->assertNull($firstCustomer->birth_date);
         $this->assertNull($firstCustomer->email);
@@ -75,11 +75,11 @@ class CustomerTest extends TestCase
 
     public function test_email_must_be_unique_when_provided(): void
     {
-        //Crea il primo cliente
+        // Crea il primo cliente
         $customer = Customer::factory()
             ->create();
 
-        //La seconda email uguale deve essere rifiutata dal database
+        // La seconda email uguale deve essere rifiutata dal database
         $this->expectException(QueryException::class);
 
         Customer::factory()
@@ -90,11 +90,11 @@ class CustomerTest extends TestCase
 
     public function test_tax_code_must_be_unique_when_provided(): void
     {
-        //Crea il primo cliente
+        // Crea il primo cliente
         $customer = Customer::factory()
             ->create();
 
-        //Il secondo codice fiscale uguale deve essere rifiutato
+        // Il secondo codice fiscale uguale deve essere rifiutato
         $this->expectException(QueryException::class);
 
         Customer::factory()
@@ -105,11 +105,11 @@ class CustomerTest extends TestCase
 
     public function test_driving_license_number_must_be_unique(): void
     {
-        //Crea il primo cliente
+        // Crea il primo cliente
         $customer = Customer::factory()
             ->create();
 
-        //La seconda patente uguale deve essere rifiutata
+        // La seconda patente uguale deve essere rifiutata
         $this->expectException(QueryException::class);
 
         Customer::factory()

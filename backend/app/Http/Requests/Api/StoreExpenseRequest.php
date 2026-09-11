@@ -9,13 +9,13 @@ use Illuminate\Validation\Rule;
 
 class StoreExpenseRequest extends FormRequest
 {
-    //Permette la validazione agli utenti già protetti da Sanctum
+    // Permette la validazione agli utenti già protetti da Sanctum
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza i dati testuali
+    // Normalizza i dati testuali
     protected function prepareForValidation(): void
     {
         $normalizedData = [];
@@ -47,7 +47,7 @@ class StoreExpenseRequest extends FormRequest
         $this->merge($normalizedData);
     }
 
-    //Regole per la creazione
+    // Regole per la creazione
     public function rules(): array
     {
         return [

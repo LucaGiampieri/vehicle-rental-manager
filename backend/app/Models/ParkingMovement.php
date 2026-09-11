@@ -7,16 +7,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ParkingMovement extends Model
 {
-    //Tipologie di movimento eseguibili manualmente.
+    // Tipologie di movimento eseguibili manualmente.
     public const TYPE_PARKED = 'parked';
+
     public const TYPE_MOVED = 'moved';
+
     public const TYPE_UNPARKED = 'unparked';
 
-    //Tipologie utilizzate durante il ciclo di un noleggio.
+    // Tipologie utilizzate durante il ciclo di un noleggio.
     public const TYPE_RENTAL_DEPARTURE = 'rental_departure';
+
     public const TYPE_RENTAL_RETURN = 'rental_return';
 
-    //Elenco completo delle tipologie ammesse.
+    // Elenco completo delle tipologie ammesse.
     public const TYPES = [
         self::TYPE_PARKED,
         self::TYPE_MOVED,
@@ -25,7 +28,7 @@ class ParkingMovement extends Model
         self::TYPE_RENTAL_RETURN,
     ];
 
-    //Campi assegnabili in modo controllato.
+    // Campi assegnabili in modo controllato.
     protected $fillable = [
         'vehicle_id',
         'vehicle_license_plate',
@@ -45,7 +48,7 @@ class ParkingMovement extends Model
         'occurred_at',
     ];
 
-    //Converte i valori del database nei tipi PHP corretti.
+    // Converte i valori del database nei tipi PHP corretti.
     protected function casts(): array
     {
         return [
@@ -55,18 +58,18 @@ class ParkingMovement extends Model
             'to_column_number' => 'integer',
             'parking_units' => 'integer',
 
-            //Converte data e ora in un oggetto Carbon.
+            // Converte data e ora in un oggetto Carbon.
             'occurred_at' => 'datetime',
         ];
     }
 
-    //Veicolo interessato dal movimento.
+    // Veicolo interessato dal movimento.
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }
 
-    //Utente che ha effettuato l'operazione.
+    // Utente che ha effettuato l'operazione.
     public function performedBy(): BelongsTo
     {
         return $this->belongsTo(
@@ -75,13 +78,13 @@ class ParkingMovement extends Model
         );
     }
 
-    //Noleggio eventualmente collegato al movimento.
+    // Noleggio eventualmente collegato al movimento.
     public function rental(): BelongsTo
     {
         return $this->belongsTo(Rental::class);
     }
 
-    //Cella dalla quale il veicolo è partito.
+    // Cella dalla quale il veicolo è partito.
     public function fromParkingSpace(): BelongsTo
     {
         return $this->belongsTo(
@@ -90,7 +93,7 @@ class ParkingMovement extends Model
         );
     }
 
-    //Cella verso la quale il veicolo è stato spostato.
+    // Cella verso la quale il veicolo è stato spostato.
     public function toParkingSpace(): BelongsTo
     {
         return $this->belongsTo(

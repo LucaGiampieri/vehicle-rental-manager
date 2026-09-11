@@ -9,56 +9,56 @@ use Illuminate\Validation\Rule;
 
 class UpdateVehicleRequest extends FormRequest
 {
-    //Permette l'esecuzione della validazione
-    //L'accesso è comunque protetto dal middleware auth:sanctum
+    // Permette l'esecuzione della validazione
+    // L'accesso è comunque protetto dal middleware auth:sanctum
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza soltanto i campi realmente inviati
+    // Normalizza soltanto i campi realmente inviati
     protected function prepareForValidation(): void
     {
         $normalizedData = [];
 
-        //Normalizza la targa soltanto se è presente nella richiesta
+        // Normalizza la targa soltanto se è presente nella richiesta
         if ($this->has('license_plate')) {
             $normalizedData['license_plate'] = Str::upper(
                 trim((string) $this->input('license_plate'))
             );
         }
 
-        //Normalizza la marca soltanto se è presente
+        // Normalizza la marca soltanto se è presente
         if ($this->has('brand')) {
             $normalizedData['brand'] = trim(
                 (string) $this->input('brand')
             );
         }
 
-        //Normalizza il modello soltanto se è presente
+        // Normalizza il modello soltanto se è presente
         if ($this->has('model')) {
             $normalizedData['model'] = trim(
                 (string) $this->input('model')
             );
         }
 
-        //Normalizza il tipo soltanto se è presente
+        // Normalizza il tipo soltanto se è presente
         if ($this->has('type')) {
             $normalizedData['type'] = Str::lower(
                 trim((string) $this->input('type'))
             );
         }
 
-        //Reinserisce nella richiesta soltanto i dati normalizzati
+        // Reinserisce nella richiesta soltanto i dati normalizzati
         $this->merge($normalizedData);
     }
 
-    //Definisce le regole per modificare un veicolo esistente
+    // Definisce le regole per modificare un veicolo esistente
     public function rules(): array
     {
         return [
-            //La targa può rimanere quella del veicolo modificato
-            //ma non può appartenere a un altro veicolo
+            // La targa può rimanere quella del veicolo modificato
+            // ma non può appartenere a un altro veicolo
             'license_plate' => [
                 'sometimes',
                 'required',
@@ -68,7 +68,7 @@ class UpdateVehicleRequest extends FormRequest
                     ->ignore($this->route('vehicle')),
             ],
 
-            //sometimes valida il campo soltanto se viene inviato
+            // sometimes valida il campo soltanto se viene inviato
             'brand' => [
                 'sometimes',
                 'required',

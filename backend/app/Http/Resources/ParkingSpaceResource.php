@@ -21,17 +21,17 @@ class ParkingSpaceResource extends JsonResource
             'row_number' => $this->row_number,
             'column_number' => $this->column_number,
 
-            //Identifica il veicolo che occupa attualmente la cella.
+            // Identifica il veicolo che occupa attualmente la cella.
             'vehicle_id' => $this->vehicle_id,
 
-            //Permette al frontend di capire rapidamente se è occupata.
+            // Permette al frontend di capire rapidamente se è occupata.
             'is_occupied' => $this->vehicle_id !== null,
 
             'is_active' => $this->is_active,
             'notes' => $this->notes,
 
-            //Mostra il veicolo soltanto quando il controller
-            //ha caricato la relazione vehicle.
+            // Mostra il veicolo soltanto quando il controller
+            // ha caricato la relazione vehicle.
             'vehicle' => $this->when(
                 $this->relationLoaded('vehicle'),
                 fn () => $this->vehicle === null

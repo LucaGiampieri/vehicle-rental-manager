@@ -18,10 +18,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ExpenseController extends Controller
 {
-    //Restituisce l'elenco paginato e filtrabile delle spese
+    // Restituisce l'elenco paginato e filtrabile delle spese
     public function index(Request $request): AnonymousResourceCollection
     {
-        //Valida i parametri inseriti nell'indirizzo della richiesta
+        // Valida i parametri inseriti nell'indirizzo della richiesta
         $filters = $request->validate([
             'vehicle_id' => [
                 'sometimes',
@@ -58,7 +58,7 @@ class ExpenseController extends Controller
             ],
         ]);
 
-        //La data finale non può precedere quella iniziale
+        // La data finale non può precedere quella iniziale
         if (
             isset($filters['date_from'], $filters['date_to'])
             && $filters['date_to'] < $filters['date_from']
@@ -71,10 +71,10 @@ class ExpenseController extends Controller
         }
 
         $expenses = Expense::query()
-            //Carica il mezzo associato evitando query aggiuntive
+            // Carica il mezzo associato evitando query aggiuntive
             ->with('vehicle')
 
-            //Applica ogni filtro soltanto quando è stato inviato
+            // Applica ogni filtro soltanto quando è stato inviato
             ->when(
                 isset($filters['vehicle_id']),
                 fn ($query) => $query->where(
@@ -143,13 +143,13 @@ class ExpenseController extends Controller
         return ExpenseResource::collection($expenses);
     }
 
-    //Crea una nuova spesa
+    // Crea una nuova spesa
     public function store(StoreExpenseRequest $request): JsonResponse
     {
         $data = $request->validated();
 
         $expense = DB::transaction(function () use ($data): Expense {
-            //Blocca il veicolo durante il salvataggio
+            // Blocca il veicolo durante il salvataggio
             $vehicle = Vehicle::query()
                 ->whereKey($data['vehicle_id'])
                 ->lockForUpdate()
@@ -157,7 +157,7 @@ class ExpenseController extends Controller
 
             $expense = Expense::create($data);
 
-            //Una lettura più recente del contachilometri aggiorna il mezzo
+            // Una lettura più recente del contachilometri aggiorna il mezzo
             if (
                 isset($data['mileage'])
                 && $data['mileage'] > $vehicle->mileage
@@ -177,7 +177,7 @@ class ExpenseController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    //Restituisce una singola spesa
+    // Restituisce una singola spesa
     public function show(Expense $expense): ExpenseResource
     {
         $expense->load('vehicle');
@@ -185,7 +185,7 @@ class ExpenseController extends Controller
         return new ExpenseResource($expense);
     }
 
-    //Modifica una spesa esistente
+    // Modifica una spesa esistente
     public function update(
         UpdateExpenseRequest $request,
         Expense $expense
@@ -196,7 +196,7 @@ class ExpenseController extends Controller
             $expense,
             $data
         ): void {
-            //Usa il nuovo veicolo se la relazione viene modificata
+            // Usa il nuovo veicolo se la relazione viene modificata
             $vehicleId = $data['vehicle_id']
                 ?? $expense->vehicle_id;
 
@@ -207,8 +207,8 @@ class ExpenseController extends Controller
 
             $expense->update($data);
 
-            //Se il chilometraggio viene modificato, non permette
-            //comunque al contachilometri generale di diminuire
+            // Se il chilometraggio viene modificato, non permette
+            // comunque al contachilometri generale di diminuire
             if (
                 array_key_exists('mileage', $data)
                 && $data['mileage'] !== null
@@ -226,7 +226,7 @@ class ExpenseController extends Controller
         return new ExpenseResource($expense);
     }
 
-    //Elimina una spesa inserita per errore
+    // Elimina una spesa inserita per errore
     public function destroy(Expense $expense): Response
     {
         $expense->delete();

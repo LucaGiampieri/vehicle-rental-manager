@@ -13,7 +13,7 @@ class ExpenseApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Verifica che un utente non autenticato non possa leggere le spese
+    // Verifica che un utente non autenticato non possa leggere le spese
     public function test_guest_cannot_access_expenses(): void
     {
         $response = $this->getJson('/api/expenses');
@@ -21,7 +21,7 @@ class ExpenseApiTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    //Verifica che un utente autenticato possa visualizzare le spese
+    // Verifica che un utente autenticato possa visualizzare le spese
     public function test_authenticated_user_can_list_expenses(): void
     {
         $this->authenticateUser();
@@ -65,7 +65,7 @@ class ExpenseApiTest extends TestCase
         ]);
     }
 
-    //Verifica la creazione e la normalizzazione di una spesa
+    // Verifica la creazione e la normalizzazione di una spesa
     public function test_authenticated_user_can_create_expense(): void
     {
         $this->authenticateUser();
@@ -137,14 +137,14 @@ class ExpenseApiTest extends TestCase
             'notes' => 'Sostituiti olio e filtri',
         ]);
 
-        //Il chilometraggio più recente aggiorna anche il veicolo
+        // Il chilometraggio più recente aggiorna anche il veicolo
         $this->assertSame(
             50500,
             Vehicle::findOrFail($vehicle->id)->mileage
         );
     }
 
-    //Verifica che una spesa storica non riduca il chilometraggio
+    // Verifica che una spesa storica non riduca il chilometraggio
     public function test_historical_expense_does_not_reduce_vehicle_mileage(): void
     {
         $this->authenticateUser();
@@ -172,7 +172,7 @@ class ExpenseApiTest extends TestCase
         );
     }
 
-    //Verifica tutte le principali regole di validazione
+    // Verifica tutte le principali regole di validazione
     public function test_expense_creation_requires_valid_data(): void
     {
         $this->authenticateUser();
@@ -208,7 +208,7 @@ class ExpenseApiTest extends TestCase
         $this->assertDatabaseCount('expenses', 0);
     }
 
-    //Verifica che la scadenza non preceda la spesa
+    // Verifica che la scadenza non preceda la spesa
     public function test_expiry_cannot_precede_expense_date(): void
     {
         $this->authenticateUser();
@@ -234,7 +234,7 @@ class ExpenseApiTest extends TestCase
         $this->assertDatabaseCount('expenses', 0);
     }
 
-    //Verifica la visualizzazione di una singola spesa
+    // Verifica la visualizzazione di una singola spesa
     public function test_authenticated_user_can_view_expense(): void
     {
         $this->authenticateUser();
@@ -276,7 +276,7 @@ class ExpenseApiTest extends TestCase
         );
     }
 
-    //Verifica la modifica parziale di una spesa
+    // Verifica la modifica parziale di una spesa
     public function test_authenticated_user_can_update_expense(): void
     {
         $this->authenticateUser();
@@ -343,7 +343,7 @@ class ExpenseApiTest extends TestCase
         );
     }
 
-    //Verifica il confronto con la scadenza già presente
+    // Verifica il confronto con la scadenza già presente
     public function test_updating_expense_date_cannot_make_expiry_invalid(): void
     {
         $this->authenticateUser();
@@ -356,7 +356,7 @@ class ExpenseApiTest extends TestCase
             'expires_on' => $expiresOn,
         ]);
 
-        //La nuova data diventerebbe successiva alla scadenza esistente
+        // La nuova data diventerebbe successiva alla scadenza esistente
         $response = $this->patchJson(
             "/api/expenses/{$expense->id}",
             [
@@ -375,7 +375,7 @@ class ExpenseApiTest extends TestCase
         );
     }
 
-    //Verifica i filtri dell'elenco
+    // Verifica i filtri dell'elenco
     public function test_expenses_can_be_filtered(): void
     {
         $this->authenticateUser();
@@ -408,7 +408,7 @@ class ExpenseApiTest extends TestCase
             'expires_on' => today()->addDays(10),
         ]);
 
-        //Filtra contemporaneamente per veicolo e categoria
+        // Filtra contemporaneamente per veicolo e categoria
         $vehicleCategoryResponse = $this->getJson(
             '/api/expenses?vehicle_id='
             .$firstVehicle->id
@@ -422,7 +422,7 @@ class ExpenseApiTest extends TestCase
             $firstExpense->id
         );
 
-        //Cerca dentro descrizione e fornitore
+        // Cerca dentro descrizione e fornitore
         $searchResponse = $this->getJson(
             '/api/expenses?search=Centrale'
         );
@@ -434,7 +434,7 @@ class ExpenseApiTest extends TestCase
             $firstExpense->id
         );
 
-        //Filtra per intervallo della data della spesa
+        // Filtra per intervallo della data della spesa
         $dateResponse = $this->getJson(
             '/api/expenses?date_from='
             .today()->subDays(6)->toDateString()
@@ -444,7 +444,7 @@ class ExpenseApiTest extends TestCase
         $dateResponse->assertOk();
         $dateResponse->assertJsonCount(2, 'data');
 
-        //Cerca le scadenze entro sei giorni
+        // Cerca le scadenze entro sei giorni
         $expiryResponse = $this->getJson(
             '/api/expenses?expires_before='
             .today()->addDays(6)->toDateString()
@@ -458,7 +458,7 @@ class ExpenseApiTest extends TestCase
         );
     }
 
-    //Verifica che l'intervallo dei filtri sia coerente
+    // Verifica che l'intervallo dei filtri sia coerente
     public function test_expense_filter_rejects_invalid_date_range(): void
     {
         $this->authenticateUser();
@@ -472,7 +472,7 @@ class ExpenseApiTest extends TestCase
         $response->assertJsonValidationErrors(['date_to']);
     }
 
-    //Verifica l'eliminazione di una spesa
+    // Verifica l'eliminazione di una spesa
     public function test_authenticated_user_can_delete_expense(): void
     {
         $this->authenticateUser();
@@ -490,7 +490,7 @@ class ExpenseApiTest extends TestCase
         ]);
     }
 
-    //Crea e autentica un utente fittizio
+    // Crea e autentica un utente fittizio
     private function authenticateUser(): void
     {
         $user = User::factory()->create();

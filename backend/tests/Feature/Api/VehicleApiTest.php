@@ -3,9 +3,9 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Expense;
+use App\Models\ParkingSpace;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Models\ParkingSpace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -14,40 +14,40 @@ class VehicleApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Verifica che un utente non autenticato non possa leggere i veicoli
+    // Verifica che un utente non autenticato non possa leggere i veicoli
     public function test_guest_cannot_access_vehicles(): void
     {
-        //Invia una richiesta senza effettuare il login
+        // Invia una richiesta senza effettuare il login
         $response = $this->getJson('/api/vehicles');
 
-        //La richiesta deve essere respinta con il codice 401 Unauthorized
+        // La richiesta deve essere respinta con il codice 401 Unauthorized
         $response->assertUnauthorized();
     }
 
-    //Verifica che un utente autenticato possa visualizzare i veicoli
+    // Verifica che un utente autenticato possa visualizzare i veicoli
     public function test_authenticated_user_can_list_vehicles(): void
     {
-        //Crea un utente fittizio nel database di test
+        // Crea un utente fittizio nel database di test
         $user = User::factory()->create();
 
-        //Autentica l'utente attraverso Sanctum
+        // Autentica l'utente attraverso Sanctum
         Sanctum::actingAs($user);
 
-        //Crea tre veicoli fittizi nel database di test
+        // Crea tre veicoli fittizi nel database di test
         Vehicle::factory()
             ->count(3)
             ->create();
 
-        //Richiede l'elenco dei veicoli attraverso l'API
+        // Richiede l'elenco dei veicoli attraverso l'API
         $response = $this->getJson('/api/vehicles');
 
-        //Verifica che la richiesta sia riuscita
+        // Verifica che la richiesta sia riuscita
         $response->assertOk();
 
-        //Verifica che la proprietà data contenga tre veicoli
+        // Verifica che la proprietà data contenga tre veicoli
         $response->assertJsonCount(3, 'data');
 
-        //Verifica la struttura della risposta JSON
+        // Verifica la struttura della risposta JSON
         $response->assertJsonStructure([
             'data' => [
                 '*' => [
@@ -73,14 +73,14 @@ class VehicleApiTest extends TestCase
         ]);
     }
 
-    //Verifica che un utente autenticato possa creare un veicolo
+    // Verifica che un utente autenticato possa creare un veicolo
     public function test_authenticated_user_can_create_vehicle(): void
     {
-        //Crea e autentica un utente fittizio
+        // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        //Prepara i dati da inviare all'API
+        // Prepara i dati da inviare all'API
         $vehicleData = [
             'license_plate' => 'AB123CD',
             'brand' => 'Fiat',
@@ -93,19 +93,19 @@ class VehicleApiTest extends TestCase
             'is_active' => true,
         ];
 
-        //Invia una richiesta POST per creare il veicolo
+        // Invia una richiesta POST per creare il veicolo
         $response = $this->postJson('/api/vehicles', $vehicleData);
 
-        //Verifica che l'API risponda con 201 Created
+        // Verifica che l'API risponda con 201 Created
         $response->assertCreated();
 
-        //Verifica i dati restituiti dall'API
+        // Verifica i dati restituiti dall'API
         $response->assertJsonPath('data.license_plate', 'AB123CD');
         $response->assertJsonPath('data.brand', 'Fiat');
         $response->assertJsonPath('data.model', 'Panda');
         $response->assertJsonPath('data.daily_rate', '45.50');
 
-        //Verifica che il veicolo esista realmente nel database di test
+        // Verifica che il veicolo esista realmente nel database di test
         $this->assertDatabaseHas('vehicles', [
             'license_plate' => 'AB123CD',
             'brand' => 'Fiat',
@@ -119,33 +119,33 @@ class VehicleApiTest extends TestCase
         ]);
     }
 
-    //Verifica che un utente autenticato possa visualizzare un singolo veicolo
+    // Verifica che un utente autenticato possa visualizzare un singolo veicolo
     public function test_authenticated_user_can_view_vehicle(): void
     {
-        //Crea e autentica un utente fittizio
+        // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        //Crea il veicolo che verrà richiesto
+        // Crea il veicolo che verrà richiesto
         $vehicle = Vehicle::factory()->create([
             'license_plate' => 'CD456EF',
             'brand' => 'Ford',
             'model' => 'Transit',
         ]);
 
-        //Invia una richiesta GET usando l'ID del veicolo
+        // Invia una richiesta GET usando l'ID del veicolo
         $response = $this->getJson("/api/vehicles/{$vehicle->id}");
 
-        //Verifica che la richiesta sia riuscita
+        // Verifica che la richiesta sia riuscita
         $response->assertOk();
 
-        //Verifica i dati del veicolo restituito
+        // Verifica i dati del veicolo restituito
         $response->assertJsonPath('data.id', $vehicle->id);
         $response->assertJsonPath('data.license_plate', 'CD456EF');
         $response->assertJsonPath('data.brand', 'Ford');
         $response->assertJsonPath('data.model', 'Transit');
 
-        //Verifica che siano presenti anche i conteggi delle relazioni
+        // Verifica che siano presenti anche i conteggi delle relazioni
         $response->assertJsonStructure([
             'data' => [
                 'rentals_count',
@@ -155,14 +155,14 @@ class VehicleApiTest extends TestCase
         ]);
     }
 
-    //Verifica che un utente autenticato possa modificare un veicolo
+    // Verifica che un utente autenticato possa modificare un veicolo
     public function test_authenticated_user_can_update_vehicle(): void
     {
-        //Crea e autentica un utente fittizio
+        // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        //Crea il veicolo iniziale
+        // Crea il veicolo iniziale
         $vehicle = Vehicle::factory()->create([
             'license_plate' => 'EF789GH',
             'brand' => 'Renault',
@@ -171,7 +171,7 @@ class VehicleApiTest extends TestCase
             'daily_rate' => 40.00,
         ]);
 
-        //Invia solamente i campi che vogliamo modificare
+        // Invia solamente i campi che vogliamo modificare
         $response = $this->patchJson(
             "/api/vehicles/{$vehicle->id}",
             [
@@ -181,20 +181,20 @@ class VehicleApiTest extends TestCase
             ]
         );
 
-        //Verifica che la modifica sia riuscita
+        // Verifica che la modifica sia riuscita
         $response->assertOk();
 
-        //Verifica i nuovi valori restituiti dall'API
+        // Verifica i nuovi valori restituiti dall'API
         $response->assertJsonPath('data.mileage', 45000);
         $response->assertJsonPath('data.daily_rate', '48.50');
         $response->assertJsonPath('data.is_active', false);
 
-        //Verifica che i campi non inviati siano rimasti invariati
+        // Verifica che i campi non inviati siano rimasti invariati
         $response->assertJsonPath('data.license_plate', 'EF789GH');
         $response->assertJsonPath('data.brand', 'Renault');
         $response->assertJsonPath('data.model', 'Clio');
 
-        //Verifica i valori realmente salvati nel database
+        // Verifica i valori realmente salvati nel database
         $this->assertDatabaseHas('vehicles', [
             'id' => $vehicle->id,
             'license_plate' => 'EF789GH',
@@ -206,7 +206,7 @@ class VehicleApiTest extends TestCase
         ]);
     }
 
-    //Verifica che il chilometraggio generale non possa diminuire
+    // Verifica che il chilometraggio generale non possa diminuire
     public function test_vehicle_mileage_cannot_be_reduced(): void
     {
         $user = User::factory()->create();
@@ -216,7 +216,7 @@ class VehicleApiTest extends TestCase
             'mileage' => 50000,
         ]);
 
-        //Prova a inserire un chilometraggio inferiore
+        // Prova a inserire un chilometraggio inferiore
         $response = $this->patchJson(
             "/api/vehicles/{$vehicle->id}",
             [
@@ -227,14 +227,14 @@ class VehicleApiTest extends TestCase
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['mileage']);
 
-        //Il valore originale deve essere rimasto invariato
+        // Il valore originale deve essere rimasto invariato
         $this->assertSame(
             50000,
             $vehicle->fresh()->mileage
         );
     }
 
-    //Verifica che un veicolo parcheggiato non possa cambiare dimensioni
+    // Verifica che un veicolo parcheggiato non possa cambiare dimensioni
     public function test_parked_vehicle_cannot_change_parking_units(): void
     {
         $user = User::factory()->create();
@@ -244,14 +244,14 @@ class VehicleApiTest extends TestCase
             'parking_units' => 2,
         ]);
 
-        //Simula le due celle occupate dal veicolo
+        // Simula le due celle occupate dal veicolo
         ParkingSpace::factory()
             ->count(2)
             ->create([
                 'vehicle_id' => $vehicle->id,
             ]);
 
-        //Prova a cambiare le dimensioni mentre il mezzo è parcheggiato
+        // Prova a cambiare le dimensioni mentre il mezzo è parcheggiato
         $response = $this->patchJson(
             "/api/vehicles/{$vehicle->id}",
             [
@@ -262,46 +262,46 @@ class VehicleApiTest extends TestCase
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['parking_units']);
 
-        //Il veicolo deve continuare a richiedere due celle
+        // Il veicolo deve continuare a richiedere due celle
         $this->assertSame(
             2,
             $vehicle->fresh()->parking_units
         );
     }
 
-    //Verifica che un utente autenticato possa eliminare un veicolo senza dati collegati
+    // Verifica che un utente autenticato possa eliminare un veicolo senza dati collegati
     public function test_authenticated_user_can_delete_vehicle_without_related_data(): void
     {
-        //Crea e autentica un utente fittizio
+        // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        //Crea un veicolo senza noleggi, spese o parcheggi collegati
+        // Crea un veicolo senza noleggi, spese o parcheggi collegati
         $vehicle = Vehicle::factory()->create([
             'license_plate' => 'GH123IJ',
         ]);
 
-        //Invia la richiesta DELETE usando l'ID del veicolo
+        // Invia la richiesta DELETE usando l'ID del veicolo
         $response = $this->deleteJson("/api/vehicles/{$vehicle->id}");
 
-        //Verifica che l'eliminazione restituisca 204 No Content
+        // Verifica che l'eliminazione restituisca 204 No Content
         $response->assertNoContent();
 
-        //Verifica che il veicolo non esista più nel database
+        // Verifica che il veicolo non esista più nel database
         $this->assertDatabaseMissing('vehicles', [
             'id' => $vehicle->id,
             'license_plate' => 'GH123IJ',
         ]);
     }
 
-    //Verifica che non sia possibile creare un veicolo con dati non validi
+    // Verifica che non sia possibile creare un veicolo con dati non validi
     public function test_vehicle_creation_requires_valid_data(): void
     {
-        //Crea e autentica un utente fittizio
+        // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        //Invia dati volutamente non validi
+        // Invia dati volutamente non validi
         $response = $this->postJson('/api/vehicles', [
             'license_plate' => '',
             'brand' => '',
@@ -314,10 +314,10 @@ class VehicleApiTest extends TestCase
             'is_active' => 'non-booleano',
         ]);
 
-        //Verifica che Laravel risponda con 422 Unprocessable Entity
+        // Verifica che Laravel risponda con 422 Unprocessable Entity
         $response->assertUnprocessable();
 
-        //Verifica gli errori di validazione restituiti
+        // Verifica gli errori di validazione restituiti
         $response->assertJsonValidationErrors([
             'license_plate',
             'brand',
@@ -330,46 +330,46 @@ class VehicleApiTest extends TestCase
             'is_active',
         ]);
 
-        //Verifica che nessun veicolo sia stato inserito
+        // Verifica che nessun veicolo sia stato inserito
         $this->assertDatabaseCount('vehicles', 0);
     }
 
-    //Verifica che un veicolo con dati collegati non possa essere eliminato
+    // Verifica che un veicolo con dati collegati non possa essere eliminato
     public function test_vehicle_with_related_expense_cannot_be_deleted(): void
     {
-        //Crea e autentica un utente fittizio
+        // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        //Crea il veicolo che proveremo a eliminare
+        // Crea il veicolo che proveremo a eliminare
         $vehicle = Vehicle::factory()->create([
             'license_plate' => 'IJ456KL',
         ]);
 
-        //Crea una spesa collegata espressamente a questo veicolo
+        // Crea una spesa collegata espressamente a questo veicolo
         Expense::factory()
             ->for($vehicle)
             ->create();
 
-        //Prova a eliminare il veicolo
+        // Prova a eliminare il veicolo
         $response = $this->deleteJson("/api/vehicles/{$vehicle->id}");
 
-        //L'API deve impedire l'eliminazione con 409 Conflict
+        // L'API deve impedire l'eliminazione con 409 Conflict
         $response->assertConflict();
 
-        //Verifica il messaggio restituito
+        // Verifica il messaggio restituito
         $response->assertJsonPath(
             'message',
             'Il veicolo non può essere eliminato perché possiede noleggi, spese o celle dell’autorimessa collegate. Rimuovilo dall’autorimessa oppure disattivalo.'
         );
 
-        //Verifica che il veicolo sia ancora presente nel database
+        // Verifica che il veicolo sia ancora presente nel database
         $this->assertDatabaseHas('vehicles', [
             'id' => $vehicle->id,
             'license_plate' => 'IJ456KL',
         ]);
 
-        //Verifica che anche la spesa collegata sia ancora presente
+        // Verifica che anche la spesa collegata sia ancora presente
         $this->assertDatabaseHas('expenses', [
             'vehicle_id' => $vehicle->id,
         ]);

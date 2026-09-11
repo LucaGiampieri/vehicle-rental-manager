@@ -11,40 +11,40 @@ use Tests\TestCase;
 
 class ExpenseTest extends TestCase
 {
-    //Ricrea il database di test prima di ogni metodo
+    // Ricrea il database di test prima di ogni metodo
     use RefreshDatabase;
 
     public function test_factory_creates_an_expense_with_a_vehicle(): void
     {
-        //Crea automaticamente una spesa e il relativo veicolo
+        // Crea automaticamente una spesa e il relativo veicolo
         $expense = Expense::factory()
             ->create();
 
-        //Controlla che i record siano stati salvati
+        // Controlla che i record siano stati salvati
         $this->assertDatabaseCount('expenses', 1);
         $this->assertDatabaseCount('vehicles', 1);
 
-        //Controlla che la categoria generata sia tra quelle ammesse
+        // Controlla che la categoria generata sia tra quelle ammesse
         $this->assertContains(
             $expense->category,
             Expense::CATEGORIES
         );
 
-        //Controlla che l'importo abbia sempre due cifre decimali
+        // Controlla che l'importo abbia sempre due cifre decimali
         $this->assertMatchesRegularExpression(
             '/^\d+\.\d{2}$/',
             $expense->amount
         );
 
-        //Controlla le conversioni definite nel Model
+        // Controlla le conversioni definite nel Model
         $this->assertInstanceOf(
             Carbon::class,
             $expense->expense_date
         );
         $this->assertIsInt($expense->mileage);
 
-        //Relazione molti a uno (N:1):
-        //la spesa restituisce il veicolo a cui appartiene
+        // Relazione molti a uno (N:1):
+        // la spesa restituisce il veicolo a cui appartiene
         $this->assertInstanceOf(
             Vehicle::class,
             $expense->vehicle
@@ -53,11 +53,11 @@ class ExpenseTest extends TestCase
 
     public function test_vehicle_has_many_expenses_and_calculates_their_total(): void
     {
-        //Crea un veicolo da utilizzare per entrambe le spese
+        // Crea un veicolo da utilizzare per entrambe le spese
         $vehicle = Vehicle::factory()
             ->create();
 
-        //Crea due spese collegate allo stesso veicolo
+        // Crea due spese collegate allo stesso veicolo
         $firstExpense = Expense::factory()
             ->create([
                 'vehicle_id' => $vehicle->id,
@@ -70,8 +70,8 @@ class ExpenseTest extends TestCase
                 'amount' => 250.25,
             ]);
 
-        //Relazione molti a uno (N:1):
-        //ogni spesa restituisce lo stesso veicolo
+        // Relazione molti a uno (N:1):
+        // ogni spesa restituisce lo stesso veicolo
         $this->assertTrue(
             $firstExpense->vehicle->is($vehicle)
         );
@@ -79,15 +79,15 @@ class ExpenseTest extends TestCase
             $secondExpense->vehicle->is($vehicle)
         );
 
-        //Relazione uno a molti (1:N):
-        //il veicolo restituisce entrambe le spese
+        // Relazione uno a molti (1:N):
+        // il veicolo restituisce entrambe le spese
         $this->assertSame(
             2,
             $vehicle->expenses()
                 ->count()
         );
 
-        //Calcola la somma delle spese direttamente dal database
+        // Calcola la somma delle spese direttamente dal database
         $totalExpenses = $vehicle->expenses()
             ->sum('amount');
 
@@ -97,14 +97,14 @@ class ExpenseTest extends TestCase
             0.001
         );
 
-        //Le Factory non devono creare veicoli aggiuntivi
+        // Le Factory non devono creare veicoli aggiuntivi
         $this->assertDatabaseCount('vehicles', 1);
         $this->assertDatabaseCount('expenses', 2);
     }
 
     public function test_expense_contains_all_allowed_categories(): void
     {
-        //Controlla l'elenco centrale delle categorie ammesse
+        // Controlla l'elenco centrale delle categorie ammesse
         $this->assertSame([
             Expense::CATEGORY_PURCHASE,
             Expense::CATEGORY_MAINTENANCE,
@@ -117,7 +117,7 @@ class ExpenseTest extends TestCase
             Expense::CATEGORY_OTHER,
         ], Expense::CATEGORIES);
 
-        //Controlla alcuni dei valori salvati nel database
+        // Controlla alcuni dei valori salvati nel database
         $this->assertSame(
             'purchase',
             Expense::CATEGORY_PURCHASE
@@ -138,11 +138,11 @@ class ExpenseTest extends TestCase
 
     public function test_expiration_dates_are_converted_and_coherent(): void
     {
-        //Prepara una data di partenza conosciuta
+        // Prepara una data di partenza conosciuta
         $expenseDate = Carbon::create(2026, 1, 15)
             ->startOfDay();
 
-        //Crea un'assicurazione con scadenza dopo un anno
+        // Crea un'assicurazione con scadenza dopo un anno
         $insurance = Expense::factory()
             ->create([
                 'category' => Expense::CATEGORY_INSURANCE,
@@ -152,7 +152,7 @@ class ExpenseTest extends TestCase
                     ->addYear(),
             ]);
 
-        //Crea una revisione con scadenza dopo due anni
+        // Crea una revisione con scadenza dopo due anni
         $inspection = Expense::factory()
             ->create([
                 'category' => Expense::CATEGORY_INSPECTION,
@@ -162,7 +162,7 @@ class ExpenseTest extends TestCase
                     ->addYears(2),
             ]);
 
-        //Controlla che le scadenze siano oggetti Carbon
+        // Controlla che le scadenze siano oggetti Carbon
         $this->assertInstanceOf(
             Carbon::class,
             $insurance->expires_on
@@ -172,7 +172,7 @@ class ExpenseTest extends TestCase
             $inspection->expires_on
         );
 
-        //Controlla gli intervalli delle due scadenze
+        // Controlla gli intervalli delle due scadenze
         $this->assertTrue(
             $insurance->expires_on->equalTo(
                 $insurance->expense_date
@@ -192,13 +192,13 @@ class ExpenseTest extends TestCase
 
     public function test_vehicle_with_expenses_cannot_be_deleted(): void
     {
-        //Crea una spesa con il relativo veicolo
+        // Crea una spesa con il relativo veicolo
         $expense = Expense::factory()
             ->create();
 
         $vehicle = $expense->vehicle;
 
-        //La chiave esterna deve impedire di eliminare il veicolo
+        // La chiave esterna deve impedire di eliminare il veicolo
         $this->expectException(QueryException::class);
 
         $vehicle->delete();

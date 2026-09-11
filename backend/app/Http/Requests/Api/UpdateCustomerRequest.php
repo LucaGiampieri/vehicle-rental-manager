@@ -8,14 +8,14 @@ use Illuminate\Validation\Rule;
 
 class UpdateCustomerRequest extends FormRequest
 {
-    //Permette l'esecuzione della validazione
-    //L'accesso è comunque protetto dal middleware auth:sanctum
+    // Permette l'esecuzione della validazione
+    // L'accesso è comunque protetto dal middleware auth:sanctum
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza solamente i campi realmente inviati
+    // Normalizza solamente i campi realmente inviati
     protected function prepareForValidation(): void
     {
         $normalizedData = [];
@@ -89,13 +89,13 @@ class UpdateCustomerRequest extends FormRequest
         $this->merge($normalizedData);
     }
 
-    //Definisce le regole per modificare un cliente esistente
+    // Definisce le regole per modificare un cliente esistente
     public function rules(): array
     {
         $customer = $this->route('customer');
 
         return [
-            //Sometimes significa: valida il campo soltanto se viene inviato
+            // Sometimes significa: valida il campo soltanto se viene inviato
             'first_name' => [
                 'sometimes',
                 'required',

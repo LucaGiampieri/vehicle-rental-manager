@@ -4,14 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class extends Migration
+{
     /**
      * Crea la cronologia dei movimenti dell'autorimessa.
      */
     public function up(): void
     {
         Schema::create('parking_movements', function (Blueprint $table) {
-            //Identificativo univoco del movimento.
+            // Identificativo univoco del movimento.
             $table->id();
 
             /*
@@ -56,13 +57,13 @@ return new class () extends Migration {
              */
             $table->string('type', 30);
 
-            //Cella iniziale del movimento, se esistente.
+            // Cella iniziale del movimento, se esistente.
             $table->foreignId('from_parking_space_id')
                 ->nullable()
                 ->constrained('parking_spaces')
                 ->nullOnDelete();
 
-            //Posizione iniziale salvata come fotografia storica.
+            // Posizione iniziale salvata come fotografia storica.
             $table->string('from_zone', 50)
                 ->nullable();
             $table->unsignedSmallInteger('from_row_number')
@@ -70,13 +71,13 @@ return new class () extends Migration {
             $table->unsignedSmallInteger('from_column_number')
                 ->nullable();
 
-            //Cella di destinazione del movimento, se esistente.
+            // Cella di destinazione del movimento, se esistente.
             $table->foreignId('to_parking_space_id')
                 ->nullable()
                 ->constrained('parking_spaces')
                 ->nullOnDelete();
 
-            //Posizione finale salvata come fotografia storica.
+            // Posizione finale salvata come fotografia storica.
             $table->string('to_zone', 50)
                 ->nullable();
             $table->unsignedSmallInteger('to_row_number')
@@ -84,33 +85,33 @@ return new class () extends Migration {
             $table->unsignedSmallInteger('to_column_number')
                 ->nullable();
 
-            //Numero di celle occupate dal veicolo.
+            // Numero di celle occupate dal veicolo.
             $table->unsignedTinyInteger('parking_units');
 
-            //Annotazione facoltativa inserita dall'operatore.
+            // Annotazione facoltativa inserita dall'operatore.
             $table->text('notes')
                 ->nullable();
 
-            //Momento effettivo nel quale è avvenuto il movimento.
+            // Momento effettivo nel quale è avvenuto il movimento.
             $table->timestamp('occurred_at')
                 ->useCurrent();
 
-            //Data di creazione e ultima modifica tecnica del record.
+            // Data di creazione e ultima modifica tecnica del record.
             $table->timestamps();
 
-            //Velocizza la cronologia di uno specifico veicolo.
+            // Velocizza la cronologia di uno specifico veicolo.
             $table->index(
                 ['vehicle_id', 'occurred_at'],
                 'parking_movements_vehicle_date_index'
             );
 
-            //Velocizza la ricerca dei movimenti collegati a un noleggio.
+            // Velocizza la ricerca dei movimenti collegati a un noleggio.
             $table->index(
                 ['rental_id', 'occurred_at'],
                 'parking_movements_rental_date_index'
             );
 
-            //Velocizza i filtri per tipologia.
+            // Velocizza i filtri per tipologia.
             $table->index('type');
         });
     }

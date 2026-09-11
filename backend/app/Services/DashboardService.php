@@ -10,13 +10,13 @@ use Carbon\Carbon;
 
 class DashboardService
 {
-    //Costruisce tutti i dati riassuntivi della dashboard.
+    // Costruisce tutti i dati riassuntivi della dashboard.
     public function build(
         Carbon $dateFrom,
         Carbon $dateTo,
         ?int $vehicleId = null
     ): array {
-        //I noleggi economici appartengono al periodo della loro data iniziale.
+        // I noleggi economici appartengono al periodo della loro data iniziale.
         $periodRentals = Rental::query()
             ->when(
                 $vehicleId !== null,
@@ -25,10 +25,9 @@ class DashboardService
             ->whereBetween('starts_at', [$dateFrom, $dateTo])
             ->get();
 
-        //I noleggi annullati non producono ricavi.
+        // I noleggi annullati non producono ricavi.
         $revenueRentals = $periodRentals->reject(
-            fn (Rental $rental) =>
-                $rental->status === Rental::STATUS_CANCELLED
+            fn (Rental $rental) => $rental->status === Rental::STATUS_CANCELLED
         );
 
         $completedRentals = $revenueRentals->where(
@@ -58,7 +57,7 @@ class DashboardService
             )
         );
 
-        //Recupera le spese sostenute nel periodo selezionato.
+        // Recupera le spese sostenute nel periodo selezionato.
         $periodExpenses = Expense::query()
             ->when(
                 $vehicleId !== null,
@@ -74,7 +73,7 @@ class DashboardService
             $periodExpenses->sum('amount')
         );
 
-        //Raggruppa le spese per manutenzione, carburante e altre categorie.
+        // Raggruppa le spese per manutenzione, carburante e altre categorie.
         $expenseBreakdown = $periodExpenses
             ->groupBy('category')
             ->sortKeys()
@@ -109,26 +108,26 @@ class DashboardService
                 'vehicle_id' => $vehicleId,
             ],
             'financial' => [
-                //Valore di tutti i noleggi non annullati iniziati nel periodo.
+                // Valore di tutti i noleggi non annullati iniziati nel periodo.
                 'contracted_revenue' => $contractedRevenue,
 
-                //Valore dei soli noleggi completati.
+                // Valore dei soli noleggi completati.
                 'completed_revenue' => $completedRevenue,
                 'amount_collected' => $amountCollected,
                 'amount_outstanding' => $amountOutstanding,
                 'total_expenses' => $totalExpenses,
 
-                //Utile previsto considerando tutti i contratti non annullati.
+                // Utile previsto considerando tutti i contratti non annullati.
                 'projected_profit' => $this->money(
                     $contractedRevenue - $totalExpenses
                 ),
 
-                //Utile maturato considerando soltanto i noleggi completati.
+                // Utile maturato considerando soltanto i noleggi completati.
                 'realized_profit' => $this->money(
                     $completedRevenue - $totalExpenses
                 ),
 
-                //Differenza tra denaro incassato e spese sostenute.
+                // Differenza tra denaro incassato e spese sostenute.
                 'cash_balance' => $this->money(
                     $amountCollected - $totalExpenses
                 ),
@@ -147,7 +146,7 @@ class DashboardService
         ];
     }
 
-    //Conta i noleggi del periodo dividendoli per stato.
+    // Conta i noleggi del periodo dividendoli per stato.
     private function rentalSummary($rentals): array
     {
         return [
@@ -167,7 +166,7 @@ class DashboardService
         ];
     }
 
-    //Calcola la situazione attuale dei veicoli selezionati.
+    // Calcola la situazione attuale dei veicoli selezionati.
     private function fleetSummary($vehicles, $vehicleIds): array
     {
         $activeVehicles = $vehicles
@@ -203,7 +202,7 @@ class DashboardService
         ];
     }
 
-    //Calcola l'occupazione attuale dell'autorimessa.
+    // Calcola l'occupazione attuale dell'autorimessa.
     private function garageSummary(): array
     {
         $totalSpaces = ParkingSpace::query()->count();
@@ -235,7 +234,7 @@ class DashboardService
         ];
     }
 
-    //Calcola giorni di noleggio, giacenza e percentuale di utilizzo.
+    // Calcola giorni di noleggio, giacenza e percentuale di utilizzo.
     private function utilizationSummary(
         Carbon $dateFrom,
         Carbon $dateTo,
@@ -278,7 +277,7 @@ class DashboardService
                     ?? $rental->expected_ends_at
                 )->copy();
 
-            //Limita ogni noleggio ai confini del periodo richiesto.
+            // Limita ogni noleggio ai confini del periodo richiesto.
             if ($usageStart->lt($dateFrom)) {
                 $usageStart = $dateFrom->copy();
             }
@@ -316,7 +315,7 @@ class DashboardService
         ];
     }
 
-    //Recupera scadenze già superate oppure previste nei prossimi 30 giorni.
+    // Recupera scadenze già superate oppure previste nei prossimi 30 giorni.
     private function deadlineSummary(?int $vehicleId): array
     {
         $today = today();
@@ -338,8 +337,7 @@ class DashboardService
         );
 
         $upcoming = $expenses->filter(
-            fn (Expense $expense) =>
-                $expense->expires_on->gte($today)
+            fn (Expense $expense) => $expense->expires_on->gte($today)
                 && $expense->expires_on->lte($limitDate)
         );
 
@@ -374,7 +372,7 @@ class DashboardService
         ];
     }
 
-    //Restituisce il numero di giorni inclusivi del periodo.
+    // Restituisce il numero di giorni inclusivi del periodo.
     private function periodDays(
         Carbon $dateFrom,
         Carbon $dateTo
@@ -387,7 +385,7 @@ class DashboardService
             ) + 1;
     }
 
-    //Uniforma tutti gli importi a due cifre decimali.
+    // Uniforma tutti gli importi a due cifre decimali.
     private function money(mixed $value): float
     {
         return round((float) $value, 2);

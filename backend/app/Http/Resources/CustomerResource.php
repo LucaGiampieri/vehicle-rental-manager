@@ -19,7 +19,7 @@ class CustomerResource extends JsonResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
 
-            //Le date vengono restituite sempre nel formato anno-mese-giorno
+            // Le date vengono restituite sempre nel formato anno-mese-giorno
             'birth_date' => $this->birth_date?->format('Y-m-d'),
 
             'email' => $this->email,
@@ -35,10 +35,10 @@ class CustomerResource extends JsonResource
             'notes' => $this->notes,
             'is_active' => $this->is_active,
 
-            //Compare soltanto quando il controller ha caricato il conteggio
+            // Compare soltanto quando il controller ha caricato il conteggio
             'rentals_count' => $this->whenCounted('rentals'),
 
-            //Le date tecniche vengono restituite nel formato ISO 8601
+            // Le date tecniche vengono restituite nel formato ISO 8601
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

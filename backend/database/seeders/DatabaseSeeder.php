@@ -10,11 +10,11 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-    * Inserisce i dati dimostrativi soltanto negli ambienti sicuri.
-    */
+     * Inserisce i dati dimostrativi soltanto negli ambienti sicuri.
+     */
     public function run(): void
     {
-        //Evita di creare account e dati demo in produzione
+        // Evita di creare account e dati demo in produzione
         if (! app()->environment(['local', 'testing'])) {
             return;
         }

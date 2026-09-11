@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class VehicleFactory extends Factory
 {
-    //Definisce i valori predefiniti di un veicolo fittizio
+    // Definisce i valori predefiniti di un veicolo fittizio
     public function definition(): array
     {
-        //Sceglie un veicolo con un numero coerente di celle richieste
+        // Sceglie un veicolo con un numero coerente di celle richieste
         $vehicle = fake()->randomElement([
             [
                 'brand' => 'Fiat',
@@ -57,20 +57,20 @@ class VehicleFactory extends Factory
         ]);
 
         return [
-            //Genera una targa fittizia nel formato AA123AA
+            // Genera una targa fittizia nel formato AA123AA
             'license_plate' => strtoupper(
                 fake()
                     ->unique()
                     ->bothify('??###??')
             ),
 
-            //Utilizza i dati del veicolo scelto
+            // Utilizza i dati del veicolo scelto
             'brand' => $vehicle['brand'],
             'model' => $vehicle['model'],
             'type' => $vehicle['type'],
             'parking_units' => $vehicle['parking_units'],
 
-            //Genera anno, chilometraggio e tariffa
+            // Genera anno, chilometraggio e tariffa
             'year' => fake()->numberBetween(
                 2015,
                 (int) now()->format('Y')
@@ -78,7 +78,7 @@ class VehicleFactory extends Factory
             'mileage' => fake()->numberBetween(0, 180000),
             'daily_rate' => fake()->randomFloat(2, 35, 180),
 
-            //Il mezzo viene creato come appartenente alla flotta attiva
+            // Il mezzo viene creato come appartenente alla flotta attiva
             'is_active' => true,
         ];
     }

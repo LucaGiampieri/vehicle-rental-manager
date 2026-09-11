@@ -11,13 +11,13 @@ use Illuminate\Validation\Validator;
 
 class UpdateExpenseRequest extends FormRequest
 {
-    //Permette la validazione agli utenti già protetti da Sanctum
+    // Permette la validazione agli utenti già protetti da Sanctum
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza solamente i campi inviati
+    // Normalizza solamente i campi inviati
     protected function prepareForValidation(): void
     {
         $normalizedData = [];
@@ -61,7 +61,7 @@ class UpdateExpenseRequest extends FormRequest
         $this->merge($normalizedData);
     }
 
-    //Regole per la modifica parziale
+    // Regole per la modifica parziale
     public function rules(): array
     {
         return [
@@ -122,7 +122,7 @@ class UpdateExpenseRequest extends FormRequest
         ];
     }
 
-    //Controlla la scadenza anche nelle modifiche parziali
+    // Controlla la scadenza anche nelle modifiche parziali
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
@@ -140,7 +140,7 @@ class UpdateExpenseRequest extends FormRequest
                 ? Carbon::parse($this->input('expense_date'))
                 : $expense->expense_date->copy();
 
-            //Null permette di eliminare una scadenza esistente
+            // Null permette di eliminare una scadenza esistente
             if (
                 $this->exists('expires_on')
                 && $this->input('expires_on') === null

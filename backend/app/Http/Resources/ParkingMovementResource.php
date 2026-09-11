@@ -18,13 +18,13 @@ class ParkingMovementResource extends JsonResource
             'id' => $this->id,
             'type' => $this->type,
 
-            //Riferimento attuale al veicolo e fotografia storica della targa.
+            // Riferimento attuale al veicolo e fotografia storica della targa.
             'vehicle_id' => $this->vehicle_id,
             'vehicle_license_plate' => $this->vehicle_license_plate,
             'parking_units' => $this->parking_units,
 
-            //Posizione dalla quale è partito il veicolo.
-            //Durante il primo parcheggio sarà null.
+            // Posizione dalla quale è partito il veicolo.
+            // Durante il primo parcheggio sarà null.
             'from' => $this->from_zone === null
                 ? null
                 : [
@@ -34,8 +34,8 @@ class ParkingMovementResource extends JsonResource
                     'column_number' => $this->from_column_number,
                 ],
 
-            //Posizione verso la quale è stato spostato il veicolo.
-            //Durante l'uscita dall'autorimessa sarà null.
+            // Posizione verso la quale è stato spostato il veicolo.
+            // Durante l'uscita dall'autorimessa sarà null.
             'to' => $this->to_zone === null
                 ? null
                 : [
@@ -48,7 +48,7 @@ class ParkingMovementResource extends JsonResource
             'notes' => $this->notes,
             'occurred_at' => $this->occurred_at?->toISOString(),
 
-            //Dati attuali del veicolo, se esiste ancora.
+            // Dati attuali del veicolo, se esiste ancora.
             'vehicle' => $this->when(
                 $this->relationLoaded('vehicle'),
                 fn () => $this->vehicle === null
@@ -62,7 +62,7 @@ class ParkingMovementResource extends JsonResource
                     ]
             ),
 
-            //Utente che ha eseguito manualmente l'operazione.
+            // Utente che ha eseguito manualmente l'operazione.
             'performed_by' => $this->when(
                 $this->relationLoaded('performedBy'),
                 fn () => $this->performedBy === null
@@ -74,7 +74,7 @@ class ParkingMovementResource extends JsonResource
                     ]
             ),
 
-            //Noleggio eventualmente associato al movimento.
+            // Noleggio eventualmente associato al movimento.
             'rental' => $this->when(
                 $this->relationLoaded('rental'),
                 fn () => $this->rental === null

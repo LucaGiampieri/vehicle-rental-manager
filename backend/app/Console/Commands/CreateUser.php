@@ -10,10 +10,10 @@ use Illuminate\Support\Str;
 
 class CreateUser extends Command
 {
-    //Nome con cui eseguiremo il comando dal terminale
+    // Nome con cui eseguiremo il comando dal terminale
     protected $signature = 'app:create-user';
 
-    //Descrizione mostrata nell'elenco dei comandi Artisan
+    // Descrizione mostrata nell'elenco dei comandi Artisan
     protected $description = 'Crea un account di gestione senza registrazione pubblica';
 
     /**
@@ -21,28 +21,28 @@ class CreateUser extends Command
      */
     public function handle(): int
     {
-        //Legge il nome ed elimina gli spazi iniziali e finali
+        // Legge il nome ed elimina gli spazi iniziali e finali
         $name = trim((string) $this->ask('Nome'));
 
-        //Legge l'email, elimina gli spazi esterni e la salva in minuscolo
+        // Legge l'email, elimina gli spazi esterni e la salva in minuscolo
         $email = Str::lower(
             trim((string) $this->ask('Email'))
         );
 
-        //Legge la password senza mostrarla nel terminale
-        //false impedisce che venga mostrata se il terminale non supporta l'input nascosto
+        // Legge la password senza mostrarla nel terminale
+        // false impedisce che venga mostrata se il terminale non supporta l'input nascosto
         $password = $this->secret(
             'Password (almeno 12 caratteri)',
             false
         );
 
-        //Chiede nuovamente la password per evitare errori di battitura
+        // Chiede nuovamente la password per evitare errori di battitura
         $passwordConfirmation = $this->secret(
             'Conferma password',
             false
         );
 
-        //Controlla tutti i dati prima di scrivere nel database
+        // Controlla tutti i dati prima di scrivere nel database
         $validator = Validator::make([
             'name' => $name,
             'email' => $email,
@@ -79,7 +79,7 @@ class CreateUser extends Command
             'password.confirmed' => 'Le due password non coincidono.',
         ]);
 
-        //Interrompe il comando se uno dei dati non è valido
+        // Interrompe il comando se uno dei dati non è valido
         if ($validator->fails()) {
             $message = $validator->errors()
                 ->first();
@@ -89,26 +89,26 @@ class CreateUser extends Command
             return self::FAILURE;
         }
 
-        //Evita che bcrypt tronchi password più lunghe di 72 byte
-        //strlen conta i byte, che possono essere più dei caratteri
+        // Evita che bcrypt tronchi password più lunghe di 72 byte
+        // strlen conta i byte, che possono essere più dei caratteri
         if (strlen($password) > 72) {
             $this->error('La password non può superare 72 byte.');
 
             return self::FAILURE;
         }
 
-        //Prepara il nuovo utente con i dati già controllati
-        $user = new User();
+        // Prepara il nuovo utente con i dati già controllati
+        $user = new User;
         $user->name = $name;
         $user->email = $email;
 
-        //Salva soltanto l'hash della password, mai la password leggibile
+        // Salva soltanto l'hash della password, mai la password leggibile
         $user->password = Hash::make($password);
 
-        //Inserisce il nuovo account nella tabella users
+        // Inserisce il nuovo account nella tabella users
         $user->save();
 
-        //Conferma che il salvataggio è terminato
+        // Conferma che il salvataggio è terminato
         $this->info('Account di gestione creato.');
 
         return self::SUCCESS;

@@ -8,18 +8,18 @@ use Illuminate\Validation\Validator;
 
 class DashboardRequest extends FormRequest
 {
-    //La dashboard è già protetta dal middleware auth:sanctum.
+    // La dashboard è già protetta dal middleware auth:sanctum.
     public function authorize(): bool
     {
         return true;
     }
 
-    //Prepara il periodo predefinito e normalizza le date ricevute.
+    // Prepara il periodo predefinito e normalizza le date ricevute.
     protected function prepareForValidation(): void
     {
         $normalizedData = [];
 
-        //Rimuove eventuali spazi dalle date inviate.
+        // Rimuove eventuali spazi dalle date inviate.
         if (
             $this->exists('date_from')
             && is_string($this->input('date_from'))
@@ -58,11 +58,11 @@ class DashboardRequest extends FormRequest
         $this->merge($normalizedData);
     }
 
-    //Definisce i filtri utilizzabili dalla dashboard.
+    // Definisce i filtri utilizzabili dalla dashboard.
     public function rules(): array
     {
         return [
-            //Se si specifica un periodo, entrambe le date sono obbligatorie.
+            // Se si specifica un periodo, entrambe le date sono obbligatorie.
             'date_from' => [
                 'required',
                 'date_format:Y-m-d',
@@ -73,7 +73,7 @@ class DashboardRequest extends FormRequest
                 'after_or_equal:date_from',
             ],
 
-            //Permette di calcolare i dati di un solo veicolo.
+            // Permette di calcolare i dati di un solo veicolo.
             'vehicle_id' => [
                 'sometimes',
                 'required',
@@ -83,7 +83,7 @@ class DashboardRequest extends FormRequest
         ];
     }
 
-    //Impedisce richieste eccessivamente grandi.
+    // Impedisce richieste eccessivamente grandi.
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
@@ -101,7 +101,7 @@ class DashboardRequest extends FormRequest
                 $this->input('date_to')
             )->endOfDay();
 
-            //Il periodo massimo consentito è di 366 giorni inclusivi.
+            // Il periodo massimo consentito è di 366 giorni inclusivi.
             if ($dateFrom->diffInDays($dateTo) > 365) {
                 $validator->errors()->add(
                     'date_to',

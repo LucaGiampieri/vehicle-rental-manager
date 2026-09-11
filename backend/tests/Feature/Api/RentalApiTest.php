@@ -14,7 +14,7 @@ class RentalApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Verifica che un utente non autenticato non possa leggere i noleggi
+    // Verifica che un utente non autenticato non possa leggere i noleggi
     public function test_guest_cannot_access_rentals(): void
     {
         $response = $this->getJson('/api/rentals');
@@ -22,7 +22,7 @@ class RentalApiTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    //Verifica che un utente autenticato possa visualizzare i noleggi
+    // Verifica che un utente autenticato possa visualizzare i noleggi
     public function test_authenticated_user_can_list_rentals(): void
     {
         $this->authenticateUser();
@@ -80,7 +80,7 @@ class RentalApiTest extends TestCase
         ]);
     }
 
-    //Verifica la creazione e il calcolo automatico del totale
+    // Verifica la creazione e il calcolo automatico del totale
     public function test_authenticated_user_can_create_rental(): void
     {
         $this->authenticateUser();
@@ -100,7 +100,7 @@ class RentalApiTest extends TestCase
             ->addDays(2)
             ->startOfHour();
 
-        //Trenta ore corrispondono a due giornate addebitabili
+        // Trenta ore corrispondono a due giornate addebitabili
         $expectedEndsAt = $startsAt
             ->copy()
             ->addHours(30);
@@ -153,7 +153,7 @@ class RentalApiTest extends TestCase
         $this->assertNull($savedRental->end_mileage);
     }
 
-    //Verifica le regole di base della creazione
+    // Verifica le regole di base della creazione
     public function test_rental_creation_requires_valid_data(): void
     {
         $this->authenticateUser();
@@ -187,7 +187,7 @@ class RentalApiTest extends TestCase
         $this->assertDatabaseCount('rentals', 0);
     }
 
-    //Verifica che il pagamento non possa superare il totale
+    // Verifica che il pagamento non possa superare il totale
     public function test_initial_payment_cannot_exceed_rental_total(): void
     {
         $this->authenticateUser();
@@ -218,7 +218,7 @@ class RentalApiTest extends TestCase
         $this->assertDatabaseCount('rentals', 0);
     }
 
-    //Verifica che due prenotazioni non possano sovrapporsi
+    // Verifica che due prenotazioni non possano sovrapporsi
     public function test_overlapping_rental_cannot_be_created(): void
     {
         $this->authenticateUser();
@@ -262,7 +262,7 @@ class RentalApiTest extends TestCase
         $this->assertDatabaseCount('rentals', 1);
     }
 
-    //Verifica che due noleggi consecutivi siano consentiti
+    // Verifica che due noleggi consecutivi siano consentiti
     public function test_rentals_can_be_created_back_to_back(): void
     {
         $this->authenticateUser();
@@ -286,7 +286,7 @@ class RentalApiTest extends TestCase
             'expected_ends_at' => $firstEndsAt,
         ]);
 
-        //Il secondo noleggio comincia esattamente alla fine del primo
+        // Il secondo noleggio comincia esattamente alla fine del primo
         $response = $this->postJson('/api/rentals', [
             'vehicle_id' => $vehicle->id,
             'customer_id' => $customer->id,
@@ -303,7 +303,7 @@ class RentalApiTest extends TestCase
         $this->assertDatabaseCount('rentals', 2);
     }
 
-    //Verifica che mezzo e cliente debbano essere attivi
+    // Verifica che mezzo e cliente debbano essere attivi
     public function test_inactive_vehicle_and_customer_cannot_be_rented(): void
     {
         $this->authenticateUser();
@@ -342,7 +342,7 @@ class RentalApiTest extends TestCase
         $this->assertDatabaseCount('rentals', 0);
     }
 
-    //Verifica che la patente copra tutto il periodo previsto
+    // Verifica che la patente copra tutto il periodo previsto
     public function test_customer_license_must_cover_rental_period(): void
     {
         $this->authenticateUser();
@@ -375,7 +375,7 @@ class RentalApiTest extends TestCase
         $this->assertDatabaseCount('rentals', 0);
     }
 
-    //Verifica la visualizzazione di un singolo noleggio
+    // Verifica la visualizzazione di un singolo noleggio
     public function test_authenticated_user_can_view_rental(): void
     {
         $this->authenticateUser();
@@ -419,7 +419,7 @@ class RentalApiTest extends TestCase
         );
     }
 
-    //Verifica la modifica di una prenotazione
+    // Verifica la modifica di una prenotazione
     public function test_reserved_rental_can_be_updated(): void
     {
         $this->authenticateUser();
@@ -476,7 +476,7 @@ class RentalApiTest extends TestCase
         $this->assertSame('100.00', $savedRental->amount_paid);
     }
 
-    //Verifica che i dati principali siano bloccati dopo la consegna
+    // Verifica che i dati principali siano bloccati dopo la consegna
     public function test_active_rental_booking_data_cannot_be_changed(): void
     {
         $this->authenticateUser();
@@ -507,7 +507,7 @@ class RentalApiTest extends TestCase
         );
     }
 
-    //Verifica la consegna e l'attivazione del noleggio
+    // Verifica la consegna e l'attivazione del noleggio
     public function test_reserved_rental_can_be_activated(): void
     {
         $this->authenticateUser();
@@ -570,7 +570,7 @@ class RentalApiTest extends TestCase
         );
     }
 
-    //Una prenotazione scaduta non può essere attivata
+    // Una prenotazione scaduta non può essere attivata
     public function test_expired_reservation_cannot_be_activated(): void
     {
         $this->authenticateUser();
@@ -598,7 +598,7 @@ class RentalApiTest extends TestCase
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['rental']);
 
-        //La prenotazione deve rimanere invariata
+        // La prenotazione deve rimanere invariata
         $this->assertSame(
             Rental::STATUS_RESERVED,
             $rental->fresh()->status
@@ -607,7 +607,7 @@ class RentalApiTest extends TestCase
         $this->assertNull($rental->fresh()->actual_starts_at);
     }
 
-    //Verifica il rientro e il completamento del noleggio
+    // Verifica il rientro e il completamento del noleggio
     public function test_active_rental_can_be_completed(): void
     {
         $this->authenticateUser();
@@ -665,7 +665,7 @@ class RentalApiTest extends TestCase
         );
     }
 
-    //Verifica che il chilometraggio non possa diminuire
+    // Verifica che il chilometraggio non possa diminuire
     public function test_rental_cannot_be_completed_with_lower_mileage(): void
     {
         $this->authenticateUser();
@@ -694,7 +694,7 @@ class RentalApiTest extends TestCase
         );
     }
 
-    //Il rientro non può ridurre una lettura più recente del veicolo
+    // Il rientro non può ridurre una lettura più recente del veicolo
     public function test_rental_completion_cannot_reduce_vehicle_mileage(): void
     {
         $this->authenticateUser();
@@ -717,7 +717,7 @@ class RentalApiTest extends TestCase
             'end_mileage' => null,
         ]);
 
-        //51000 supera l'inizio, ma ridurrebbe la lettura attuale di 52000
+        // 51000 supera l'inizio, ma ridurrebbe la lettura attuale di 52000
         $response = $this->patchJson(
             "/api/rentals/{$rental->id}/complete",
             [
@@ -728,7 +728,7 @@ class RentalApiTest extends TestCase
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['end_mileage']);
 
-        //Il noleggio deve essere rimasto attivo
+        // Il noleggio deve essere rimasto attivo
         $this->assertSame(
             Rental::STATUS_ACTIVE,
             $rental->fresh()->status
@@ -736,14 +736,14 @@ class RentalApiTest extends TestCase
 
         $this->assertNull($rental->fresh()->end_mileage);
 
-        //Anche il chilometraggio del veicolo deve rimanere invariato
+        // Anche il chilometraggio del veicolo deve rimanere invariato
         $this->assertSame(
             52000,
             $vehicle->fresh()->mileage
         );
     }
 
-    //Verifica che una prenotazione possa essere annullata
+    // Verifica che una prenotazione possa essere annullata
     public function test_reserved_rental_can_be_cancelled(): void
     {
         $this->authenticateUser();
@@ -768,7 +768,7 @@ class RentalApiTest extends TestCase
         ]);
     }
 
-    //Verifica che una prenotazione senza pagamenti possa essere eliminata
+    // Verifica che una prenotazione senza pagamenti possa essere eliminata
     public function test_unpaid_reserved_rental_can_be_deleted(): void
     {
         $this->authenticateUser();
@@ -789,7 +789,7 @@ class RentalApiTest extends TestCase
         ]);
     }
 
-    //Verifica la protezione dello storico e dei pagamenti
+    // Verifica la protezione dello storico e dei pagamenti
     public function test_historical_or_paid_rentals_cannot_be_deleted(): void
     {
         $this->authenticateUser();
@@ -829,7 +829,7 @@ class RentalApiTest extends TestCase
         ]);
     }
 
-    //Crea e autentica un utente fittizio per i test protetti
+    // Crea e autentica un utente fittizio per i test protetti
     private function authenticateUser(): void
     {
         $user = User::factory()->create();

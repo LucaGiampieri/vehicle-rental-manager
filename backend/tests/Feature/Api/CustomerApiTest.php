@@ -13,7 +13,7 @@ class CustomerApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Verifica che un utente non autenticato non possa leggere i clienti
+    // Verifica che un utente non autenticato non possa leggere i clienti
     public function test_guest_cannot_access_customers(): void
     {
         $response = $this->getJson('/api/customers');
@@ -21,7 +21,7 @@ class CustomerApiTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    //Verifica che un utente autenticato possa visualizzare i clienti
+    // Verifica che un utente autenticato possa visualizzare i clienti
     public function test_authenticated_user_can_list_customers(): void
     {
         $user = User::factory()->create();
@@ -61,7 +61,7 @@ class CustomerApiTest extends TestCase
         ]);
     }
 
-    //Verifica che un utente autenticato possa creare un cliente
+    // Verifica che un utente autenticato possa creare un cliente
     public function test_authenticated_user_can_create_customer(): void
     {
         $user = User::factory()->create();
@@ -136,7 +136,7 @@ class CustomerApiTest extends TestCase
         $this->assertTrue($savedCustomer->is_active);
     }
 
-    //Verifica che un utente autenticato possa visualizzare un cliente
+    // Verifica che un utente autenticato possa visualizzare un cliente
     public function test_authenticated_user_can_view_customer(): void
     {
         $user = User::factory()->create();
@@ -168,7 +168,7 @@ class CustomerApiTest extends TestCase
         $response->assertJsonPath('data.rentals_count', 0);
     }
 
-    //Verifica che un utente autenticato possa modificare un cliente
+    // Verifica che un utente autenticato possa modificare un cliente
     public function test_authenticated_user_can_update_customer(): void
     {
         $user = User::factory()->create();
@@ -228,7 +228,7 @@ class CustomerApiTest extends TestCase
         $this->assertFalse($savedCustomer->is_active);
     }
 
-    //Verifica che un cliente senza noleggi possa essere eliminato
+    // Verifica che un cliente senza noleggi possa essere eliminato
     public function test_authenticated_user_can_delete_customer_without_rentals(): void
     {
         $user = User::factory()->create();
@@ -247,7 +247,7 @@ class CustomerApiTest extends TestCase
         ]);
     }
 
-    //Verifica che non sia possibile creare un cliente con dati non validi
+    // Verifica che non sia possibile creare un cliente con dati non validi
     public function test_customer_creation_requires_valid_data(): void
     {
         $user = User::factory()->create();
@@ -286,7 +286,7 @@ class CustomerApiTest extends TestCase
         $this->assertDatabaseCount('customers', 0);
     }
 
-    //Verifica che email, codice fiscale e patente non possano essere duplicati
+    // Verifica che email, codice fiscale e patente non possano essere duplicati
     public function test_customer_unique_fields_cannot_be_duplicated(): void
     {
         $user = User::factory()->create();
@@ -320,7 +320,7 @@ class CustomerApiTest extends TestCase
         $this->assertDatabaseCount('customers', 1);
     }
 
-    //Verifica che una modifica non possa usare l'email di un altro cliente
+    // Verifica che una modifica non possa usare l'email di un altro cliente
     public function test_customer_cannot_use_another_customers_email(): void
     {
         $user = User::factory()->create();
@@ -355,7 +355,7 @@ class CustomerApiTest extends TestCase
         ]);
     }
 
-    //Verifica che un cliente con noleggi non possa essere eliminato
+    // Verifica che un cliente con noleggi non possa essere eliminato
     public function test_customer_with_rentals_cannot_be_deleted(): void
     {
         $user = User::factory()->create();

@@ -6,13 +6,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ParkVehicleRequest extends FormRequest
 {
-    //L'accesso è già protetto dal middleware auth:sanctum.
+    // L'accesso è già protetto dal middleware auth:sanctum.
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza l'eventuale annotazione.
+    // Normalizza l'eventuale annotazione.
     protected function prepareForValidation(): void
     {
         if ($this->has('notes')) {
@@ -32,7 +32,7 @@ class ParkVehicleRequest extends FormRequest
         }
     }
 
-    //Dati necessari per parcheggiare un veicolo.
+    // Dati necessari per parcheggiare un veicolo.
     public function rules(): array
     {
         return [

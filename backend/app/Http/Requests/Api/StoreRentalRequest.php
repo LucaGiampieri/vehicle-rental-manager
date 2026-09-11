@@ -11,14 +11,14 @@ use Illuminate\Validation\Validator;
 
 class StoreRentalRequest extends FormRequest
 {
-    //Permette l'esecuzione della validazione
-    //L'accesso è comunque protetto dal middleware auth:sanctum
+    // Permette l'esecuzione della validazione
+    // L'accesso è comunque protetto dal middleware auth:sanctum
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza le annotazioni prima della validazione
+    // Normalizza le annotazioni prima della validazione
     protected function prepareForValidation(): void
     {
         $notes = $this->input('notes');
@@ -30,39 +30,39 @@ class StoreRentalRequest extends FormRequest
         }
     }
 
-    //Definisce le regole di base per creare un noleggio
+    // Definisce le regole di base per creare un noleggio
     public function rules(): array
     {
         return [
-            //Il mezzo deve esistere
+            // Il mezzo deve esistere
             'vehicle_id' => [
                 'required',
                 'integer',
                 'exists:vehicles,id',
             ],
 
-            //Il cliente deve esistere
+            // Il cliente deve esistere
             'customer_id' => [
                 'required',
                 'integer',
                 'exists:customers,id',
             ],
 
-            //Il noleggio deve iniziare nel futuro
+            // Il noleggio deve iniziare nel futuro
             'starts_at' => [
                 'required',
                 'date',
                 'after:now',
             ],
 
-            //La fine prevista deve essere successiva all'inizio
+            // La fine prevista deve essere successiva all'inizio
             'expected_ends_at' => [
                 'required',
                 'date',
                 'after:starts_at',
             ],
 
-            //La tariffa concordata è obbligatoria
+            // La tariffa concordata è obbligatoria
             'daily_rate' => [
                 'required',
                 'numeric',
@@ -70,7 +70,7 @@ class StoreRentalRequest extends FormRequest
                 'max:99999999.99',
             ],
 
-            //Può contenere una caparra o un pagamento iniziale
+            // Può contenere una caparra o un pagamento iniziale
             'amount_paid' => [
                 'sometimes',
                 'numeric',
@@ -78,7 +78,7 @@ class StoreRentalRequest extends FormRequest
                 'max:99999999.99',
             ],
 
-            //Le annotazioni sono facoltative
+            // Le annotazioni sono facoltative
             'notes' => [
                 'nullable',
                 'string',
@@ -87,11 +87,11 @@ class StoreRentalRequest extends FormRequest
         ];
     }
 
-    //Esegue i controlli che richiedono dati provenienti dal database
+    // Esegue i controlli che richiedono dati provenienti dal database
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            //Evita controlli successivi se le regole di base sono già fallite
+            // Evita controlli successivi se le regole di base sono già fallite
             if ($validator->errors()->isNotEmpty()) {
                 return;
             }
@@ -104,7 +104,7 @@ class StoreRentalRequest extends FormRequest
                 $this->integer('customer_id')
             );
 
-            //Le regole exists garantiscono normalmente la loro presenza
+            // Le regole exists garantiscono normalmente la loro presenza
             if ($vehicle === null || $customer === null) {
                 return;
             }
@@ -117,7 +117,7 @@ class StoreRentalRequest extends FormRequest
                 $this->input('expected_ends_at')
             );
 
-            //Un mezzo disattivato non può essere prenotato
+            // Un mezzo disattivato non può essere prenotato
             if (! $vehicle->is_active) {
                 $validator->errors()->add(
                     'vehicle_id',
@@ -125,7 +125,7 @@ class StoreRentalRequest extends FormRequest
                 );
             }
 
-            //Un cliente disattivato non può effettuare noleggi
+            // Un cliente disattivato non può effettuare noleggi
             if (! $customer->is_active) {
                 $validator->errors()->add(
                     'customer_id',
@@ -133,7 +133,7 @@ class StoreRentalRequest extends FormRequest
                 );
             }
 
-            //La patente deve essere valida fino alla fine prevista
+            // La patente deve essere valida fino alla fine prevista
             if (
                 $customer->driving_license_expiry_date
                     ->copy()
@@ -146,7 +146,7 @@ class StoreRentalRequest extends FormRequest
                 );
             }
 
-            //Impedisce prenotazioni sovrapposte per lo stesso mezzo
+            // Impedisce prenotazioni sovrapposte per lo stesso mezzo
             if (
                 Rental::hasOverlappingRental(
                     $vehicle->id,
@@ -160,14 +160,14 @@ class StoreRentalRequest extends FormRequest
                 );
             }
 
-            //Calcola il totale che verrà salvato dal controller
+            // Calcola il totale che verrà salvato dal controller
             $totalAmount = Rental::calculateTotalAmount(
                 $startsAt,
                 $expectedEndsAt,
                 $this->input('daily_rate')
             );
 
-            //Non permette di registrare un pagamento superiore al totale
+            // Non permette di registrare un pagamento superiore al totale
             if (
                 (float) $this->input('amount_paid', 0)
                 > (float) $totalAmount

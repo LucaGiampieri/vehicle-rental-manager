@@ -16,7 +16,7 @@ class DashboardApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Crea e autentica un utente fittizio.
+    // Crea e autentica un utente fittizio.
     private function authenticateUser(): void
     {
         Sanctum::actingAs(
@@ -24,7 +24,7 @@ class DashboardApiTest extends TestCase
         );
     }
 
-    //Crea un noleggio con i valori necessari per il test.
+    // Crea un noleggio con i valori necessari per il test.
     private function createRental(
         Vehicle $vehicle,
         array $attributes = []
@@ -44,7 +44,7 @@ class DashboardApiTest extends TestCase
         ], $attributes));
     }
 
-    //Crea una spesa associata al veicolo.
+    // Crea una spesa associata al veicolo.
     private function createExpense(
         Vehicle $vehicle,
         array $attributes = []
@@ -59,14 +59,14 @@ class DashboardApiTest extends TestCase
         ], $attributes));
     }
 
-    //La dashboard deve essere protetta da Sanctum.
+    // La dashboard deve essere protetta da Sanctum.
     public function test_guest_cannot_access_dashboard(): void
     {
         $this->getJson('/api/dashboard')
             ->assertUnauthorized();
     }
 
-    //Senza filtri vengono analizzati automaticamente gli ultimi 30 giorni.
+    // Senza filtri vengono analizzati automaticamente gli ultimi 30 giorni.
     public function test_dashboard_uses_default_period(): void
     {
         $this->travelTo(
@@ -120,7 +120,7 @@ class DashboardApiTest extends TestCase
         ]);
     }
 
-    //Verifica ricavi, incassi, crediti, spese e profitti.
+    // Verifica ricavi, incassi, crediti, spese e profitti.
     public function test_dashboard_calculates_financial_summary(): void
     {
         $this->travelTo(
@@ -131,7 +131,7 @@ class DashboardApiTest extends TestCase
 
         $vehicle = Vehicle::factory()->create();
 
-        //Noleggio completato: 300 euro interamente incassati.
+        // Noleggio completato: 300 euro interamente incassati.
         $this->createRental($vehicle, [
             'status' => Rental::STATUS_COMPLETED,
             'starts_at' => Carbon::parse('2026-09-02 10:00:00'),
@@ -139,7 +139,7 @@ class DashboardApiTest extends TestCase
             'amount_paid' => 300,
         ]);
 
-        //Noleggio attivo: 500 euro, di cui 200 incassati.
+        // Noleggio attivo: 500 euro, di cui 200 incassati.
         $this->createRental($vehicle, [
             'status' => Rental::STATUS_ACTIVE,
             'starts_at' => Carbon::parse('2026-09-10 10:00:00'),
@@ -150,7 +150,7 @@ class DashboardApiTest extends TestCase
             'amount_paid' => 200,
         ]);
 
-        //Prenotazione futura: 400 euro, di cui 100 incassati.
+        // Prenotazione futura: 400 euro, di cui 100 incassati.
         $this->createRental($vehicle, [
             'status' => Rental::STATUS_RESERVED,
             'starts_at' => Carbon::parse('2026-09-20 10:00:00'),
@@ -162,7 +162,7 @@ class DashboardApiTest extends TestCase
             'amount_paid' => 100,
         ]);
 
-        //Il noleggio annullato viene contato, ma non genera ricavi.
+        // Il noleggio annullato viene contato, ma non genera ricavi.
         $this->createRental($vehicle, [
             'status' => Rental::STATUS_CANCELLED,
             'starts_at' => Carbon::parse('2026-09-05 10:00:00'),
@@ -174,7 +174,7 @@ class DashboardApiTest extends TestCase
             'amount_paid' => 0,
         ]);
 
-        //Questo noleggio è fuori dal periodo e non deve essere conteggiato.
+        // Questo noleggio è fuori dal periodo e non deve essere conteggiato.
         $this->createRental($vehicle, [
             'starts_at' => Carbon::parse('2026-08-20 10:00:00'),
             'actual_starts_at' => Carbon::parse('2026-08-20 10:00:00'),
@@ -194,7 +194,7 @@ class DashboardApiTest extends TestCase
             'amount' => 50,
         ]);
 
-        //Questa spesa è fuori dal periodo.
+        // Questa spesa è fuori dal periodo.
         $this->createExpense($vehicle, [
             'expense_date' => '2026-08-10',
             'amount' => 200,
@@ -246,7 +246,7 @@ class DashboardApiTest extends TestCase
         $response->assertJsonPath('data.rentals.completed', 1);
         $response->assertJsonPath('data.rentals.cancelled', 1);
 
-        //Le categorie vengono ordinate alfabeticamente.
+        // Le categorie vengono ordinate alfabeticamente.
         $response->assertJsonPath(
             'data.financial.expenses_by_category.0.category',
             Expense::CATEGORY_FUEL
@@ -265,7 +265,7 @@ class DashboardApiTest extends TestCase
         );
     }
 
-    //Verifica stato della flotta e occupazione delle celle.
+    // Verifica stato della flotta e occupazione delle celle.
     public function test_dashboard_calculates_fleet_and_garage_summary(): void
     {
         $this->authenticateUser();
@@ -283,7 +283,7 @@ class DashboardApiTest extends TestCase
             'is_active' => false,
         ]);
 
-        //Tre celle attive: due occupate e una libera.
+        // Tre celle attive: due occupate e una libera.
         ParkingSpace::factory()->create([
             'zone' => 'main',
             'row_number' => 1,
@@ -308,7 +308,7 @@ class DashboardApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        //Questa quarta cella è disattivata.
+        // Questa quarta cella è disattivata.
         ParkingSpace::factory()->create([
             'zone' => 'main',
             'row_number' => 1,
@@ -350,7 +350,7 @@ class DashboardApiTest extends TestCase
         );
     }
 
-    //Verifica giorni noleggiati, giacenza e percentuale di utilizzo.
+    // Verifica giorni noleggiati, giacenza e percentuale di utilizzo.
     public function test_dashboard_calculates_vehicle_utilization(): void
     {
         $this->travelTo(
@@ -367,7 +367,7 @@ class DashboardApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        //Primo veicolo utilizzato esattamente per cinque giorni.
+        // Primo veicolo utilizzato esattamente per cinque giorni.
         $this->createRental($firstVehicle, [
             'status' => Rental::STATUS_COMPLETED,
             'starts_at' => Carbon::parse('2026-09-01 00:00:00'),
@@ -375,7 +375,7 @@ class DashboardApiTest extends TestCase
             'actual_ends_at' => Carbon::parse('2026-09-06 00:00:00'),
         ]);
 
-        //Secondo veicolo utilizzato per gli ultimi tre giorni del periodo.
+        // Secondo veicolo utilizzato per gli ultimi tre giorni del periodo.
         $this->createRental($secondVehicle, [
             'status' => Rental::STATUS_ACTIVE,
             'starts_at' => Carbon::parse('2026-09-08 00:00:00'),
@@ -413,7 +413,7 @@ class DashboardApiTest extends TestCase
         );
     }
 
-    //Il filtro vehicle_id deve isolare dati economici e flotta.
+    // Il filtro vehicle_id deve isolare dati economici e flotta.
     public function test_dashboard_can_be_filtered_by_vehicle(): void
     {
         $this->authenticateUser();
@@ -466,7 +466,7 @@ class DashboardApiTest extends TestCase
         );
     }
 
-    //Verifica scadenze superate e imminenti.
+    // Verifica scadenze superate e imminenti.
     public function test_dashboard_lists_expense_deadlines(): void
     {
         $this->travelTo(
@@ -495,7 +495,7 @@ class DashboardApiTest extends TestCase
             'expires_on' => '2026-09-30',
         ]);
 
-        //Questa scadenza è oltre i prossimi 30 giorni.
+        // Questa scadenza è oltre i prossimi 30 giorni.
         $this->createExpense($vehicle, [
             'description' => 'Scadenza lontana',
             'expires_on' => '2026-10-20',
@@ -527,7 +527,7 @@ class DashboardApiTest extends TestCase
         );
     }
 
-    //Verifica date, durata massima e identificativo del veicolo.
+    // Verifica date, durata massima e identificativo del veicolo.
     public function test_dashboard_rejects_invalid_filters(): void
     {
         $this->authenticateUser();

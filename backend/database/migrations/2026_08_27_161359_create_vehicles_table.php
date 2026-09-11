@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -14,31 +15,31 @@ return new class () extends Migration {
 
             $table->id();
 
-            //Targa
-            //unique impedisce di registrare due mezzi con la stessa targa
+            // Targa
+            // unique impedisce di registrare due mezzi con la stessa targa
             $table->string('license_plate', 20)
-            ->unique();
+                ->unique();
 
-            //Marca del mezzo
+            // Marca del mezzo
             $table->string('brand', 50);
 
-            //Modello del mezzo
+            // Modello del mezzo
             $table->string('model', 80);
 
-            //Tipo del mezzo
+            // Tipo del mezzo
             $table->string('type', 20);
 
-            //Anno del mezzo
-            //nullable permette di lasciarlo senza valore
+            // Anno del mezzo
+            // nullable permette di lasciarlo senza valore
             $table->unsignedSmallInteger('year')
-            ->nullable();
+                ->nullable();
 
-            //Chilometraggio
+            // Chilometraggio
             $table->unsignedInteger('mileage');
 
-            //Indica sel mezzo fa ancora parte della flotta attiva
+            // Indica sel mezzo fa ancora parte della flotta attiva
             $table->boolean('is_active')
-            ->default(true);
+                ->default(true);
 
             $table->timestamps();
         });

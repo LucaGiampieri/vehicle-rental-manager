@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ParkingSpaceController extends Controller
 {
-    //Restituisce tutte le celle ordinate secondo la loro posizione.
+    // Restituisce tutte le celle ordinate secondo la loro posizione.
     public function index(): AnonymousResourceCollection
     {
         /*
@@ -32,39 +32,39 @@ class ParkingSpaceController extends Controller
         return ParkingSpaceResource::collection($parkingSpaces);
     }
 
-    //Crea una nuova cella vuota nell'autorimessa.
+    // Crea una nuova cella vuota nell'autorimessa.
     public function store(
         StoreParkingSpaceRequest $request
     ): JsonResponse {
-        //validated restituisce soltanto i dati approvati.
-        //vehicle_id non è presente, quindi la cella nasce sempre vuota.
+        // validated restituisce soltanto i dati approvati.
+        // vehicle_id non è presente, quindi la cella nasce sempre vuota.
         $parkingSpace = ParkingSpace::create(
             $request->validated()
         );
 
-        //Rilegge i valori predefiniti assegnati dal database.
+        // Rilegge i valori predefiniti assegnati dal database.
         $parkingSpace->refresh();
 
-        //Carica l'eventuale relazione con il veicolo.
+        // Carica l'eventuale relazione con il veicolo.
         $parkingSpace->load('vehicle');
 
-        //Restituisce la cella appena creata con 201 Created.
+        // Restituisce la cella appena creata con 201 Created.
         return (new ParkingSpaceResource($parkingSpace))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    //Restituisce una singola cella.
+    // Restituisce una singola cella.
     public function show(
         ParkingSpace $parkingSpace
     ): ParkingSpaceResource {
-        //La cella viene trovata automaticamente tramite Route Model Binding.
+        // La cella viene trovata automaticamente tramite Route Model Binding.
         $parkingSpace->load('vehicle');
 
         return new ParkingSpaceResource($parkingSpace);
     }
 
-    //Modifica la struttura o le informazioni di una cella
+    // Modifica la struttura o le informazioni di una cella
     public function update(
         UpdateParkingSpaceRequest $request,
         ParkingSpace $parkingSpace
@@ -76,7 +76,7 @@ class ParkingSpaceController extends Controller
                 $parkingSpace,
                 $data
             ): ParkingSpace {
-                //Blocca la cella durante il controllo e la modifica
+                // Blocca la cella durante il controllo e la modifica
                 $lockedParkingSpace = ParkingSpace::query()
                     ->whereKey($parkingSpace->id)
                     ->lockForUpdate()
@@ -99,7 +99,7 @@ class ParkingSpaceController extends Controller
                     );
 
                 if ($lockedParkingSpace->vehicle_id !== null) {
-                    //Una cella occupata non può essere disattivata
+                    // Una cella occupata non può essere disattivata
                     if (
                         array_key_exists('is_active', $data)
                         && ! (bool) $data['is_active']
@@ -109,7 +109,7 @@ class ParkingSpaceController extends Controller
                         );
                     }
 
-                    //La posizione fa parte del blocco occupato dal veicolo
+                    // La posizione fa parte del blocco occupato dal veicolo
                     if ($positionWasChanged) {
                         throw new RuntimeException(
                             'Una cella occupata non può cambiare posizione. Sposta o rimuovi prima il veicolo.'
@@ -127,28 +127,28 @@ class ParkingSpaceController extends Controller
             ], Response::HTTP_CONFLICT);
         }
 
-        //Rilegge la cella e il veicolo eventualmente collegato
+        // Rilegge la cella e il veicolo eventualmente collegato
         $parkingSpace->refresh();
         $parkingSpace->load('vehicle');
 
         return new ParkingSpaceResource($parkingSpace);
     }
 
-    //Elimina una cella soltanto se non contiene un veicolo.
+    // Elimina una cella soltanto se non contiene un veicolo.
     public function destroy(
         ParkingSpace $parkingSpace
     ): Response {
-        //Impedisce di eliminare una cella attualmente occupata.
+        // Impedisce di eliminare una cella attualmente occupata.
         if ($parkingSpace->vehicle_id !== null) {
             return response()->json([
                 'message' => 'Una cella occupata non può essere eliminata. Sposta o rimuovi prima il veicolo.',
             ], Response::HTTP_CONFLICT);
         }
 
-        //Elimina definitivamente la cella vuota.
+        // Elimina definitivamente la cella vuota.
         $parkingSpace->delete();
 
-        //Restituisce 204 perché non ci sono dati da mostrare.
+        // Restituisce 204 perché non ci sono dati da mostrare.
         return response()->noContent();
     }
 }

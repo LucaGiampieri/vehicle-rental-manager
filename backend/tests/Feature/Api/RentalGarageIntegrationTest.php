@@ -17,7 +17,7 @@ class RentalGarageIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Crea e autentica l'operatore che esegue le azioni.
+    // Crea e autentica l'operatore che esegue le azioni.
     private function authenticateUser(): User
     {
         $user = User::factory()->create();
@@ -27,7 +27,7 @@ class RentalGarageIntegrationTest extends TestCase
         return $user;
     }
 
-    //Crea una griglia rettangolare di celle vuote.
+    // Crea una griglia rettangolare di celle vuote.
     private function createGrid(
         int $rows,
         int $columns,
@@ -55,7 +55,7 @@ class RentalGarageIntegrationTest extends TestCase
         return $spaces;
     }
 
-    //Crea un noleggio prenotato che può essere attivato.
+    // Crea un noleggio prenotato che può essere attivato.
     private function createReservedRental(
         Vehicle $vehicle
     ): Rental {
@@ -79,7 +79,7 @@ class RentalGarageIntegrationTest extends TestCase
         ]);
     }
 
-    //Crea un noleggio già attivo che può essere completato.
+    // Crea un noleggio già attivo che può essere completato.
     private function createActiveRental(
         Vehicle $vehicle
     ): Rental {
@@ -103,7 +103,7 @@ class RentalGarageIntegrationTest extends TestCase
         ]);
     }
 
-    //L'attivazione libera le celle e registra la partenza.
+    // L'attivazione libera le celle e registra la partenza.
     public function test_activating_rental_unparks_vehicle(): void
     {
         $user = $this->authenticateUser();
@@ -117,7 +117,7 @@ class RentalGarageIntegrationTest extends TestCase
         $rental = $this->createReservedRental($vehicle);
         $spaces = $this->createGrid(1, 2, 'departure');
 
-        //Posiziona inizialmente il veicolo nelle due celle.
+        // Posiziona inizialmente il veicolo nelle due celle.
         ParkingSpace::query()
             ->whereKey($spaces->pluck('id'))
             ->update([
@@ -140,7 +140,7 @@ class RentalGarageIntegrationTest extends TestCase
             Rental::STATUS_ACTIVE
         );
 
-        //Tutte le celle devono essere state liberate.
+        // Tutte le celle devono essere state liberate.
         $this->assertSame(
             0,
             ParkingSpace::query()
@@ -148,7 +148,7 @@ class RentalGarageIntegrationTest extends TestCase
                 ->count()
         );
 
-        //La partenza deve essere collegata al noleggio.
+        // La partenza deve essere collegata al noleggio.
         $this->assertDatabaseHas('parking_movements', [
             'vehicle_id' => $vehicle->id,
             'rental_id' => $rental->id,
@@ -169,7 +169,7 @@ class RentalGarageIntegrationTest extends TestCase
         $this->assertNotNull($rental->actual_starts_at);
     }
 
-    //Un mezzo già fuori può comunque iniziare il noleggio.
+    // Un mezzo già fuori può comunque iniziare il noleggio.
     public function test_unparked_vehicle_can_activate_rental(): void
     {
         $this->authenticateUser();
@@ -195,11 +195,11 @@ class RentalGarageIntegrationTest extends TestCase
             Rental::STATUS_ACTIVE
         );
 
-        //Non viene creato un movimento perché il mezzo era già fuori.
+        // Non viene creato un movimento perché il mezzo era già fuori.
         $this->assertDatabaseCount('parking_movements', 0);
     }
 
-    //Il completamento parcheggia il veicolo e registra il rientro.
+    // Il completamento parcheggia il veicolo e registra il rientro.
     public function test_completing_rental_parks_vehicle(): void
     {
         $user = $this->authenticateUser();
@@ -234,7 +234,7 @@ class RentalGarageIntegrationTest extends TestCase
         );
         $response->assertJsonPath('data.end_mileage', 20500);
 
-        //Il veicolo deve occupare tutte le quattro celle.
+        // Il veicolo deve occupare tutte le quattro celle.
         $this->assertSame(
             4,
             ParkingSpace::query()
@@ -264,7 +264,7 @@ class RentalGarageIntegrationTest extends TestCase
         $this->assertSame(20500, $vehicle->mileage);
     }
 
-    //Se il blocco non è disponibile, il noleggio non viene completato.
+    // Se il blocco non è disponibile, il noleggio non viene completato.
     public function test_failed_return_rolls_back_rental_completion(): void
     {
         $this->authenticateUser();
@@ -277,7 +277,7 @@ class RentalGarageIntegrationTest extends TestCase
 
         $rental = $this->createActiveRental($vehicle);
 
-        //Una sola cella non è sufficiente per un veicolo da quattro unità.
+        // Una sola cella non è sufficiente per un veicolo da quattro unità.
         $spaces = $this->createGrid(1, 1, 'rollback');
 
         $response = $this->patchJson(
@@ -294,7 +294,7 @@ class RentalGarageIntegrationTest extends TestCase
         $rental->refresh();
         $vehicle->refresh();
 
-        //La transazione deve annullare tutte le modifiche.
+        // La transazione deve annullare tutte le modifiche.
         $this->assertSame(
             Rental::STATUS_ACTIVE,
             $rental->status
@@ -313,7 +313,7 @@ class RentalGarageIntegrationTest extends TestCase
         $this->assertDatabaseCount('parking_movements', 0);
     }
 
-    //La cella di rientro, se inviata, deve esistere.
+    // La cella di rientro, se inviata, deve esistere.
     public function test_return_parking_space_must_exist(): void
     {
         $this->authenticateUser();

@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -12,56 +13,56 @@ return new class () extends Migration {
     {
         Schema::create('expenses', function (Blueprint $table) {
 
-            //Identificativo univoco della spesa
+            // Identificativo univoco della spesa
             $table->id();
 
-            //Veicolo associato alla spesa
+            // Veicolo associato alla spesa
             $table->foreignId('vehicle_id')
                 ->constrained('vehicles')
                 ->restrictOnDelete();
 
-            //Tipologia della spesa
+            // Tipologia della spesa
             $table->string('category', 30);
 
-            //Descrizione leggibile della spesa
+            // Descrizione leggibile della spesa
             $table->string('description');
 
-            //Importo realmente sostenuto
+            // Importo realmente sostenuto
             $table->decimal('amount', 10, 2);
 
-            //Data in cui la spesa è stata sostenuta
+            // Data in cui la spesa è stata sostenuta
             $table->date('expense_date');
 
-            //Eventuale data di scadenza
-            //Viene usata per bollo, assicurazione e revisione
+            // Eventuale data di scadenza
+            // Viene usata per bollo, assicurazione e revisione
             $table->date('expires_on')
                 ->nullable();
 
-            //Chilometraggio del veicolo al momento della spesa
+            // Chilometraggio del veicolo al momento della spesa
             $table->unsignedInteger('mileage')
                 ->nullable();
 
-            //Officina, assicurazione o altro fornitore
+            // Officina, assicurazione o altro fornitore
             $table->string('supplier', 150)
                 ->nullable();
 
-            //Informazioni aggiuntive
+            // Informazioni aggiuntive
             $table->text('notes')
                 ->nullable();
 
-            //Data di creazione e ultima modifica
+            // Data di creazione e ultima modifica
             $table->timestamps();
 
-            //Velocizza il calcolo dei costi di un mezzo per periodo
+            // Velocizza il calcolo dei costi di un mezzo per periodo
             $table->index(
                 ['vehicle_id', 'expense_date'],
                 'expenses_vehicle_date_index'
             );
 
-            //Velocizza i filtri per categoria
+            // Velocizza i filtri per categoria
             $table->index('category');
 
-            //Velocizza la ricerca delle prossime scadenze
+            // Velocizza la ricerca delle prossime scadenze
             $table->index('expires_on');
         });
     }
@@ -71,7 +72,7 @@ return new class () extends Migration {
      */
     public function down(): void
     {
-        //Elimina la tabella e il collegamento con vehicles
+        // Elimina la tabella e il collegamento con vehicles
         Schema::dropIfExists('expenses');
     }
 };

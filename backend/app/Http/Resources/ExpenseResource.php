@@ -21,11 +21,11 @@ class ExpenseResource extends JsonResource
             'description' => $this->description,
             'amount' => $this->amount,
 
-            //Le date vengono restituite nel formato usato dai form HTML
+            // Le date vengono restituite nel formato usato dai form HTML
             'expense_date' => $this->expense_date?->format('Y-m-d'),
             'expires_on' => $this->expires_on?->format('Y-m-d'),
 
-            //Null indica che la spesa non possiede una scadenza
+            // Null indica che la spesa non possiede una scadenza
             'is_expired' => $this->expires_on === null
                 ? null
                 : $this->expires_on->lt(today()),
@@ -34,7 +34,7 @@ class ExpenseResource extends JsonResource
             'supplier' => $this->supplier,
             'notes' => $this->notes,
 
-            //Riepilogo del veicolo associato
+            // Riepilogo del veicolo associato
             'vehicle' => $this->whenLoaded(
                 'vehicle',
                 fn () => [

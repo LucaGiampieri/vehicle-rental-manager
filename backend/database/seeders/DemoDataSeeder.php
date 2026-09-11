@@ -23,7 +23,7 @@ class DemoDataSeeder extends Seeder
         DB::transaction(function (): void {
             $today = now()->startOfDay();
 
-            //Crea l'utente con cui provare l'applicazione.
+            // Crea l'utente con cui provare l'applicazione.
             $user = User::updateOrCreate(
                 ['email' => 'admin@example.com'],
                 [
@@ -33,7 +33,7 @@ class DemoDataSeeder extends Seeder
                 ]
             );
 
-            //Crea quattro mezzi con dimensioni e situazioni differenti.
+            // Crea quattro mezzi con dimensioni e situazioni differenti.
             $panda = Vehicle::updateOrCreate(
                 ['license_plate' => 'DEMO-001'],
                 [
@@ -113,7 +113,7 @@ class DemoDataSeeder extends Seeder
                 ->whereIn('vehicle_id', $vehicles->pluck('id'))
                 ->delete();
 
-            //Crea tre clienti dimostrativi con patente valida.
+            // Crea tre clienti dimostrativi con patente valida.
             $luca = Customer::updateOrCreate(
                 ['driving_license_number' => 'DEMO-LIC-001'],
                 [
@@ -168,7 +168,7 @@ class DemoDataSeeder extends Seeder
                 ]
             );
 
-            //Crea una griglia principale di 4 righe per 6 colonne.
+            // Crea una griglia principale di 4 righe per 6 colonne.
             $spaces = collect();
 
             for ($row = 1; $row <= 4; $row++) {
@@ -193,7 +193,7 @@ class DemoDataSeeder extends Seeder
                 }
             }
 
-            //La Panda occupa una cella; il Transit ne occupa due affiancate.
+            // La Panda occupa una cella; il Transit ne occupa due affiancate.
             $spaces->get('1-1')->update([
                 'vehicle_id' => $panda->id,
             ]);
@@ -204,7 +204,7 @@ class DemoDataSeeder extends Seeder
                 ]);
             }
 
-            //Noleggio concluso recentemente.
+            // Noleggio concluso recentemente.
             $completedRental = Rental::create([
                 'vehicle_id' => $panda->id,
                 'customer_id' => $luca->id,
@@ -221,7 +221,7 @@ class DemoDataSeeder extends Seeder
                 'notes' => 'Noleggio dimostrativo completato.',
             ]);
 
-            //Noleggio attualmente attivo: il camper si trova fuori sede.
+            // Noleggio attualmente attivo: il camper si trova fuori sede.
             $activeRental = Rental::create([
                 'vehicle_id' => $ducato->id,
                 'customer_id' => $anna->id,
@@ -238,7 +238,7 @@ class DemoDataSeeder extends Seeder
                 'notes' => 'Camper attualmente noleggiato.',
             ]);
 
-            //Prenotazione futura.
+            // Prenotazione futura.
             Rental::create([
                 'vehicle_id' => $panda->id,
                 'customer_id' => $marco->id,
@@ -255,7 +255,7 @@ class DemoDataSeeder extends Seeder
                 'notes' => 'Prenotazione futura dimostrativa.',
             ]);
 
-            //Prenotazione annullata conservata nello storico.
+            // Prenotazione annullata conservata nello storico.
             Rental::create([
                 'vehicle_id' => $transit->id,
                 'customer_id' => $luca->id,
@@ -272,7 +272,7 @@ class DemoDataSeeder extends Seeder
                 'notes' => 'Prenotazione annullata dimostrativa.',
             ]);
 
-            //Registra costi recenti, storici e relative scadenze.
+            // Registra costi recenti, storici e relative scadenze.
             Expense::create([
                 'vehicle_id' => $panda->id,
                 'category' => Expense::CATEGORY_PURCHASE,
@@ -333,7 +333,7 @@ class DemoDataSeeder extends Seeder
                 'notes' => null,
             ]);
 
-            //Registra il rientro della Panda nella prima cella.
+            // Registra il rientro della Panda nella prima cella.
             ParkingMovement::create([
                 'vehicle_id' => $panda->id,
                 'vehicle_license_plate' => $panda->license_plate,
@@ -353,7 +353,7 @@ class DemoDataSeeder extends Seeder
                 'occurred_at' => $today->copy()->subDays(17)->setTime(10, 0),
             ]);
 
-            //Registra il parcheggio manuale del Transit.
+            // Registra il parcheggio manuale del Transit.
             ParkingMovement::create([
                 'vehicle_id' => $transit->id,
                 'vehicle_license_plate' => $transit->license_plate,
@@ -373,7 +373,7 @@ class DemoDataSeeder extends Seeder
                 'occurred_at' => $today->copy()->subDays(10)->setTime(16, 30),
             ]);
 
-            //Registra la partenza del camper per il noleggio attivo.
+            // Registra la partenza del camper per il noleggio attivo.
             ParkingMovement::create([
                 'vehicle_id' => $ducato->id,
                 'vehicle_license_plate' => $ducato->license_plate,

@@ -6,16 +6,16 @@ use App\Models\ParkingMovement;
 use App\Models\ParkingSpace;
 use App\Models\Rental;
 use App\Models\Vehicle;
+use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use Database\Seeders\DatabaseSeeder;
 
 class DemoDataSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Verifica quantità e collegamenti principali dei dati dimostrativi.
+    // Verifica quantità e collegamenti principali dei dati dimostrativi.
     public function test_demo_data_is_created_correctly(): void
     {
         $this->seed(DemoDataSeeder::class);
@@ -79,12 +79,12 @@ class DemoDataSeederTest extends TestCase
             'zone' => 'main',
             'row_number' => 4,
             'column_number' => 6,
-            //MySQL conserva i booleani come 0 e 1.
+            // MySQL conserva i booleani come 0 e 1.
             'is_active' => 0,
         ]);
     }
 
-    //Verifica che una seconda esecuzione non duplichi i dati demo.
+    // Verifica che una seconda esecuzione non duplichi i dati demo.
     public function test_demo_seeder_can_be_run_more_than_once(): void
     {
         $this->seed(DemoDataSeeder::class);
@@ -98,18 +98,18 @@ class DemoDataSeederTest extends TestCase
         $this->assertDatabaseCount('parking_movements', 3);
     }
 
-    //Verifica che il Seeder principale non inserisca dati demo in produzione
+    // Verifica che il Seeder principale non inserisca dati demo in produzione
     public function test_demo_data_is_not_created_in_production(): void
     {
-        //Simula l'ambiente di produzione
+        // Simula l'ambiente di produzione
         $this->app->detectEnvironment(
             fn (): string => 'production'
         );
 
-        //Esegue direttamente il Seeder principale
-        (new DatabaseSeeder())->run();
+        // Esegue direttamente il Seeder principale
+        (new DatabaseSeeder)->run();
 
-        //L'account con password dimostrativa non deve essere creato
+        // L'account con password dimostrativa non deve essere creato
         $this->assertDatabaseMissing('users', [
             'email' => 'admin@example.com',
         ]);

@@ -8,21 +8,21 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ExpenseFactory extends Factory
 {
-    //Definisce i valori predefiniti di una spesa fittizia
+    // Definisce i valori predefiniti di una spesa fittizia
     public function definition(): array
     {
-        //Sceglie una delle categorie definite nel Model Expense
+        // Sceglie una delle categorie definite nel Model Expense
         $category = fake()->randomElement(
             Expense::CATEGORIES
         );
 
-        //Genera una data compresa negli ultimi due anni
+        // Genera una data compresa negli ultimi due anni
         $expenseDate = fake()->dateTimeBetween(
             '-2 years',
             'now'
         );
 
-        //Genera una descrizione coerente con la categoria
+        // Genera una descrizione coerente con la categoria
         $description = match ($category) {
             Expense::CATEGORY_PURCHASE => 'Acquisto del veicolo',
             Expense::CATEGORY_MAINTENANCE => 'Manutenzione ordinaria',
@@ -35,7 +35,7 @@ class ExpenseFactory extends Factory
             Expense::CATEGORY_OTHER => 'Altra spesa',
         };
 
-        //Genera un importo realistico in base alla categoria
+        // Genera un importo realistico in base alla categoria
         $amount = match ($category) {
             Expense::CATEGORY_PURCHASE => fake()
                 ->randomFloat(2, 5000, 70000),
@@ -57,7 +57,7 @@ class ExpenseFactory extends Factory
                 ->randomFloat(2, 10, 1000),
         };
 
-        //Calcola la scadenza soltanto per i costi che la prevedono
+        // Calcola la scadenza soltanto per i costi che la prevedono
         $expiresOn = match ($category) {
             Expense::CATEGORY_ROAD_TAX,
             Expense::CATEGORY_INSURANCE => (clone $expenseDate)
@@ -68,25 +68,25 @@ class ExpenseFactory extends Factory
         };
 
         return [
-            //Crea automaticamente un veicolo se non ne viene fornito uno
+            // Crea automaticamente un veicolo se non ne viene fornito uno
             'vehicle_id' => Vehicle::factory(),
 
-            //Salva categoria, descrizione e importo
+            // Salva categoria, descrizione e importo
             'category' => $category,
             'description' => $description,
             'amount' => $amount,
 
-            //Salva data della spesa ed eventuale scadenza
+            // Salva data della spesa ed eventuale scadenza
             'expense_date' => $expenseDate,
             'expires_on' => $expiresOn,
 
-            //Genera il chilometraggio registrato al momento della spesa
+            // Genera il chilometraggio registrato al momento della spesa
             'mileage' => fake()->numberBetween(0, 180000),
 
-            //Genera un fornitore fittizio
+            // Genera un fornitore fittizio
             'supplier' => fake()->company(),
 
-            //La spesa non possiede annotazioni iniziali
+            // La spesa non possiede annotazioni iniziali
             'notes' => null,
         ];
     }

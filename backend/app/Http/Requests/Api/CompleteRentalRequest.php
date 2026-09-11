@@ -9,13 +9,13 @@ use Illuminate\Validation\Validator;
 
 class CompleteRentalRequest extends FormRequest
 {
-    //Permette l'esecuzione della validazione
+    // Permette l'esecuzione della validazione
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza le eventuali annotazioni
+    // Normalizza le eventuali annotazioni
     protected function prepareForValidation(): void
     {
         $notes = $this->input('notes');
@@ -27,11 +27,11 @@ class CompleteRentalRequest extends FormRequest
         }
     }
 
-    //Definisce i dati necessari per registrare il rientro
+    // Definisce i dati necessari per registrare il rientro
     public function rules(): array
     {
         return [
-            //Se non viene inviata, il controller utilizzerà l'ora attuale
+            // Se non viene inviata, il controller utilizzerà l'ora attuale
             'actual_ends_at' => [
                 'sometimes',
                 'required',
@@ -39,8 +39,8 @@ class CompleteRentalRequest extends FormRequest
                 'before_or_equal:now',
             ],
 
-            //Cella iniziale nella quale parcheggiare il veicolo al rientro.
-            //È facoltativa perché il mezzo potrebbe essere portato in officina.
+            // Cella iniziale nella quale parcheggiare il veicolo al rientro.
+            // È facoltativa perché il mezzo potrebbe essere portato in officina.
             'parking_space_id' => [
                 'sometimes',
                 'required',
@@ -48,14 +48,14 @@ class CompleteRentalRequest extends FormRequest
                 'exists:parking_spaces,id',
             ],
 
-            //Il chilometraggio finale è obbligatorio
+            // Il chilometraggio finale è obbligatorio
             'end_mileage' => [
                 'required',
                 'integer',
                 'min:0',
             ],
 
-            //Permette di registrare il saldo al momento del rientro
+            // Permette di registrare il saldo al momento del rientro
             'amount_paid' => [
                 'sometimes',
                 'required',
@@ -64,7 +64,7 @@ class CompleteRentalRequest extends FormRequest
                 'max:99999999.99',
             ],
 
-            //Permette di aggiungere annotazioni sul rientro
+            // Permette di aggiungere annotazioni sul rientro
             'notes' => [
                 'sometimes',
                 'nullable',
@@ -74,7 +74,7 @@ class CompleteRentalRequest extends FormRequest
         ];
     }
 
-    //Controlla lo stato e la coerenza dei dati finali
+    // Controlla lo stato e la coerenza dei dati finali
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
@@ -88,7 +88,7 @@ class CompleteRentalRequest extends FormRequest
                 return;
             }
 
-            //Soltanto un noleggio attivo può essere completato
+            // Soltanto un noleggio attivo può essere completato
             if ($rental->status !== Rental::STATUS_ACTIVE) {
                 $validator->errors()->add(
                     'rental',
@@ -102,12 +102,12 @@ class CompleteRentalRequest extends FormRequest
                 ? Carbon::parse($this->input('actual_ends_at'))
                 : now();
 
-            //Usa la consegna effettiva; per compatibilità usa quella
-            //prevista se il dato effettivo non fosse presente
+            // Usa la consegna effettiva; per compatibilità usa quella
+            // prevista se il dato effettivo non fosse presente
             $rentalStartsAt = $rental->actual_starts_at
                 ?? $rental->starts_at;
 
-            //Il rientro non può essere precedente alla consegna
+            // Il rientro non può essere precedente alla consegna
             if ($actualEndsAt->lt($rentalStartsAt)) {
                 $validator->errors()->add(
                     'actual_ends_at',
@@ -115,7 +115,7 @@ class CompleteRentalRequest extends FormRequest
                 );
             }
 
-            //Un noleggio attivo deve possedere il chilometraggio iniziale
+            // Un noleggio attivo deve possedere il chilometraggio iniziale
             if ($rental->start_mileage === null) {
                 $validator->errors()->add(
                     'rental',
@@ -141,7 +141,7 @@ class CompleteRentalRequest extends FormRequest
                 );
             }
 
-            //L'importo pagato non può superare il totale concordato
+            // L'importo pagato non può superare il totale concordato
             if (
                 $this->exists('amount_paid')
                 && (float) $this->input('amount_paid')

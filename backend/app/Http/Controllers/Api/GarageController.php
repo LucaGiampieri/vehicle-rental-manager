@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class GarageController extends Controller
 {
-    //Parcheggia un veicolo partendo dalla cella indicata.
+    // Parcheggia un veicolo partendo dalla cella indicata.
     public function park(
         ParkVehicleRequest $request,
         GarageService $garageService
@@ -46,13 +46,13 @@ class GarageController extends Controller
             return $this->conflictResponse($exception);
         }
 
-        //Il primo parcheggio crea un nuovo movimento.
+        // Il primo parcheggio crea un nuovo movimento.
         return (new ParkingMovementResource($movement))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    //Sposta un veicolo parcheggiato verso un nuovo blocco.
+    // Sposta un veicolo parcheggiato verso un nuovo blocco.
     public function move(
         MoveVehicleRequest $request,
         Vehicle $vehicle,
@@ -75,13 +75,13 @@ class GarageController extends Controller
             return $this->conflictResponse($exception);
         }
 
-        //Lo spostamento è riuscito e restituisce 200 OK.
+        // Lo spostamento è riuscito e restituisce 200 OK.
         return (new ParkingMovementResource($movement))
             ->response()
             ->setStatusCode(Response::HTTP_OK);
     }
 
-    //Fa uscire un veicolo dall'autorimessa e libera le sue celle.
+    // Fa uscire un veicolo dall'autorimessa e libera le sue celle.
     public function unpark(
         UnparkVehicleRequest $request,
         Vehicle $vehicle,
@@ -99,13 +99,13 @@ class GarageController extends Controller
             return $this->conflictResponse($exception);
         }
 
-        //L'uscita è riuscita e restituisce 200 OK.
+        // L'uscita è riuscita e restituisce 200 OK.
         return (new ParkingMovementResource($movement))
             ->response()
             ->setStatusCode(Response::HTTP_OK);
     }
 
-    //Restituisce la cronologia generale con filtri facoltativi.
+    // Restituisce la cronologia generale con filtri facoltativi.
     public function movements(
         Request $request
     ): AnonymousResourceCollection {
@@ -175,7 +175,7 @@ class GarageController extends Controller
         return ParkingMovementResource::collection($movements);
     }
 
-    //Restituisce tutti i movimenti di uno specifico veicolo.
+    // Restituisce tutti i movimenti di uno specifico veicolo.
     public function vehicleMovements(
         Vehicle $vehicle
     ): AnonymousResourceCollection {
@@ -193,7 +193,7 @@ class GarageController extends Controller
         return ParkingMovementResource::collection($movements);
     }
 
-    //Prepara una risposta 409 per le operazioni non eseguibili.
+    // Prepara una risposta 409 per le operazioni non eseguibili.
     private function conflictResponse(
         RuntimeException $exception
     ): JsonResponse {

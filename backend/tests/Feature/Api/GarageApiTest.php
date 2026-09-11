@@ -4,9 +4,9 @@ namespace Tests\Feature\Api;
 
 use App\Models\ParkingMovement;
 use App\Models\ParkingSpace;
+use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Models\Rental;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Laravel\Sanctum\Sanctum;
@@ -16,7 +16,7 @@ class GarageApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    //Crea e autentica un utente fittizio.
+    // Crea e autentica un utente fittizio.
     private function authenticateUser(): User
     {
         $user = User::factory()->create();
@@ -26,7 +26,7 @@ class GarageApiTest extends TestCase
         return $user;
     }
 
-    //Crea una griglia rettangolare di celle vuote.
+    // Crea una griglia rettangolare di celle vuote.
     private function createGrid(
         int $rows,
         int $columns,
@@ -54,15 +54,14 @@ class GarageApiTest extends TestCase
         return $spaces;
     }
 
-    //Trova una cella della griglia attraverso riga e colonna.
+    // Trova una cella della griglia attraverso riga e colonna.
     private function spaceAt(
         Collection $spaces,
         int $row,
         int $column
     ): ParkingSpace {
         $space = $spaces->first(
-            fn (ParkingSpace $space) =>
-                $space->row_number === $row
+            fn (ParkingSpace $space) => $space->row_number === $row
                 && $space->column_number === $column
         );
 
@@ -71,7 +70,7 @@ class GarageApiTest extends TestCase
         return $space;
     }
 
-    //Le operazioni del garage richiedono l'autenticazione.
+    // Le operazioni del garage richiedono l'autenticazione.
     public function test_guest_cannot_access_garage(): void
     {
         $this->postJson('/api/garage/park')
@@ -81,7 +80,7 @@ class GarageApiTest extends TestCase
             ->assertUnauthorized();
     }
 
-    //La richiesta di parcheggio deve contenere dati validi.
+    // La richiesta di parcheggio deve contenere dati validi.
     public function test_parking_request_requires_valid_data(): void
     {
         $this->authenticateUser();
@@ -102,7 +101,7 @@ class GarageApiTest extends TestCase
         $this->assertDatabaseCount('parking_movements', 0);
     }
 
-    //Verifica i blocchi 1x1, 1x2, 2x2 e 2x4.
+    // Verifica i blocchi 1x1, 1x2, 2x2 e 2x4.
     public function test_vehicles_occupy_required_rectangular_blocks(): void
     {
         $this->authenticateUser();
@@ -161,12 +160,12 @@ class GarageApiTest extends TestCase
         $this->assertDatabaseCount('parking_movements', 4);
     }
 
-    //Blocchi incompleti, disattivati oppure occupati vengono rifiutati.
+    // Blocchi incompleti, disattivati oppure occupati vengono rifiutati.
     public function test_unavailable_parking_blocks_are_rejected(): void
     {
         $this->authenticateUser();
 
-        //Caso 1: manca una cella necessaria.
+        // Caso 1: manca una cella necessaria.
         $missingGrid = $this->createGrid(1, 1, 'missing');
         $missingVehicle = Vehicle::factory()->create([
             'parking_units' => 2,
@@ -177,7 +176,7 @@ class GarageApiTest extends TestCase
             'parking_space_id' => $missingGrid->first()->id,
         ])->assertConflict();
 
-        //Caso 2: una cella è disattivata.
+        // Caso 2: una cella è disattivata.
         $inactiveGrid = $this->createGrid(1, 2, 'inactive');
         $inactiveVehicle = Vehicle::factory()->create([
             'parking_units' => 2,
@@ -196,7 +195,7 @@ class GarageApiTest extends TestCase
             )->id,
         ])->assertConflict();
 
-        //Caso 3: una cella appartiene a un altro veicolo.
+        // Caso 3: una cella appartiene a un altro veicolo.
         $occupiedGrid = $this->createGrid(1, 2, 'occupied');
 
         $vehicle = Vehicle::factory()->create([
@@ -221,7 +220,7 @@ class GarageApiTest extends TestCase
         $this->assertDatabaseCount('parking_movements', 0);
     }
 
-    //Un veicolo noleggiato non può essere parcheggiato manualmente
+    // Un veicolo noleggiato non può essere parcheggiato manualmente
     public function test_vehicle_with_active_rental_cannot_be_parked_manually(): void
     {
         $this->authenticateUser();
@@ -255,16 +254,16 @@ class GarageApiTest extends TestCase
             'Un veicolo con un noleggio attivo non può essere parcheggiato manualmente.'
         );
 
-        //La cella deve essere rimasta vuota
+        // La cella deve essere rimasta vuota
         $this->assertNull(
             $parkingSpace->fresh()->vehicle_id
         );
 
-        //Il tentativo fallito non deve creare movimenti
+        // Il tentativo fallito non deve creare movimenti
         $this->assertDatabaseCount('parking_movements', 0);
     }
 
-    //Lo stesso veicolo non può essere parcheggiato due volte.
+    // Lo stesso veicolo non può essere parcheggiato due volte.
     public function test_vehicle_cannot_be_parked_twice(): void
     {
         $this->authenticateUser();
@@ -295,7 +294,7 @@ class GarageApiTest extends TestCase
         $this->assertDatabaseCount('parking_movements', 1);
     }
 
-    //Un veicolo può essere spostato verso un nuovo blocco.
+    // Un veicolo può essere spostato verso un nuovo blocco.
     public function test_parked_vehicle_can_be_moved(): void
     {
         $this->authenticateUser();
@@ -335,7 +334,7 @@ class GarageApiTest extends TestCase
             'Cambio posizione'
         );
 
-        //Le due vecchie celle devono essere libere.
+        // Le due vecchie celle devono essere libere.
         $this->assertSame(
             2,
             ParkingSpace::query()
@@ -347,7 +346,7 @@ class GarageApiTest extends TestCase
                 ->count()
         );
 
-        //Le due nuove celle devono essere occupate.
+        // Le due nuove celle devono essere occupate.
         $this->assertSame(
             2,
             ParkingSpace::query()
@@ -359,7 +358,7 @@ class GarageApiTest extends TestCase
                 ->count()
         );
 
-        //Non può essere spostato nuovamente sullo stesso blocco.
+        // Non può essere spostato nuovamente sullo stesso blocco.
         $this->patchJson(
             "/api/garage/vehicles/{$vehicle->id}/move",
             ['parking_space_id' => $newStart->id]
@@ -368,7 +367,7 @@ class GarageApiTest extends TestCase
         $this->assertDatabaseCount('parking_movements', 2);
     }
 
-    //Un veicolo non parcheggiato non può essere spostato o rimosso.
+    // Un veicolo non parcheggiato non può essere spostato o rimosso.
     public function test_unparked_vehicle_cannot_be_moved_or_unparked(): void
     {
         $this->authenticateUser();
@@ -390,7 +389,7 @@ class GarageApiTest extends TestCase
         $this->assertDatabaseCount('parking_movements', 0);
     }
 
-    //L'uscita libera tutte le celle e crea la cronologia.
+    // L'uscita libera tutte le celle e crea la cronologia.
     public function test_parked_vehicle_can_be_unparked(): void
     {
         $this->authenticateUser();
@@ -438,7 +437,7 @@ class GarageApiTest extends TestCase
         ]);
     }
 
-    //La cronologia può essere letta e filtrata.
+    // La cronologia può essere letta e filtrata.
     public function test_movements_can_be_listed_and_filtered(): void
     {
         $this->authenticateUser();
@@ -500,7 +499,7 @@ class GarageApiTest extends TestCase
         $vehicleResponse->assertOk();
         $vehicleResponse->assertJsonCount(2, 'data');
 
-        //Verifica anche la validazione dei filtri.
+        // Verifica anche la validazione dei filtri.
         $invalidFilters = $this->getJson(
             '/api/garage/movements'
             .'?type=invalid'

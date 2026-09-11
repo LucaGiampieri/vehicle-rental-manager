@@ -10,27 +10,27 @@ use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
 {
-    //Restituisce il riepilogo economico e operativo.
+    // Restituisce il riepilogo economico e operativo.
     public function index(
         DashboardRequest $request,
         DashboardService $dashboardService
     ): JsonResponse {
-        //Recupera soltanto i filtri che hanno superato la validazione.
+        // Recupera soltanto i filtri che hanno superato la validazione.
         $filters = $request->validated();
 
-        //La data iniziale parte dalle ore 00:00:00.
+        // La data iniziale parte dalle ore 00:00:00.
         $dateFrom = Carbon::createFromFormat(
             'Y-m-d',
             $filters['date_from']
         )->startOfDay();
 
-        //La data finale comprende tutta la giornata fino alle 23:59:59.
+        // La data finale comprende tutta la giornata fino alle 23:59:59.
         $dateTo = Carbon::createFromFormat(
             'Y-m-d',
             $filters['date_to']
         )->endOfDay();
 
-        //Il filtro del veicolo rimane null quando non viene utilizzato.
+        // Il filtro del veicolo rimane null quando non viene utilizzato.
         $vehicleId = isset($filters['vehicle_id'])
             ? (int) $filters['vehicle_id']
             : null;

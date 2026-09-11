@@ -9,19 +9,19 @@ use Illuminate\Validation\Rule;
 
 class UpdateParkingSpaceRequest extends FormRequest
 {
-    //Permette l'esecuzione della validazione.
-    //L'accesso è comunque protetto dal middleware auth:sanctum.
+    // Permette l'esecuzione della validazione.
+    // L'accesso è comunque protetto dal middleware auth:sanctum.
     public function authorize(): bool
     {
         return true;
     }
 
-    //Normalizza soltanto i campi realmente inviati.
+    // Normalizza soltanto i campi realmente inviati.
     protected function prepareForValidation(): void
     {
         $normalizedData = [];
 
-        //Recupera la cella attraverso il Route Model Binding.
+        // Recupera la cella attraverso il Route Model Binding.
         $parkingSpace = $this->route('parking_space');
 
         if ($this->has('label')) {
@@ -84,14 +84,14 @@ class UpdateParkingSpaceRequest extends FormRequest
         $this->merge($normalizedData);
     }
 
-    //Definisce le regole per modificare una cella esistente.
+    // Definisce le regole per modificare una cella esistente.
     public function rules(): array
     {
         $parkingSpace = $this->route('parking_space');
 
         return [
-            //L'etichetta può rimanere quella della cella modificata,
-            //ma non può appartenere a un'altra cella.
+            // L'etichetta può rimanere quella della cella modificata,
+            // ma non può appartenere a un'altra cella.
             'label' => [
                 'sometimes',
                 'nullable',
@@ -108,8 +108,8 @@ class UpdateParkingSpaceRequest extends FormRequest
                 'max:50',
             ],
 
-            //Controlla che la nuova posizione non sia già occupata
-            //da un'altra cella.
+            // Controlla che la nuova posizione non sia già occupata
+            // da un'altra cella.
             'row_number' => [
                 'sometimes',
                 'required',

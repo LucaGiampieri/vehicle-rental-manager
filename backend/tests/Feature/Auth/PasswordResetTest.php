@@ -20,7 +20,7 @@ class PasswordResetTest extends TestCase
 
         $this->post('/forgot-password', ['email' => $user->email]);
 
-        //Controlla anche l'indirizzo inserito nell'email
+        // Controlla anche l'indirizzo inserito nell'email
         Notification::assertSentTo(
             $user,
             ResetPassword::class,
