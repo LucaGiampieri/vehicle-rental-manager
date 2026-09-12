@@ -27,6 +27,19 @@ class VehicleResource extends JsonResource
             'daily_rate' => $this->daily_rate,
             'is_active' => $this->is_active,
 
+            // Copertina utilizzata negli elenchi e nelle schede
+            'primary_image' => new VehicleImageResource(
+                $this->whenLoaded('primaryImage')
+            ),
+
+            // Galleria completa, caricata soltanto quando richiesta
+            'images' => VehicleImageResource::collection(
+                $this->whenLoaded('images')
+            ),
+
+            // Numero complessivo delle fotografie
+            'images_count' => $this->whenCounted('images'),
+
             // I conteggi vengono aggiunti soltanto se caricati dal Controller
             'rentals_count' => $this->whenCounted('rentals'),
             'expenses_count' => $this->whenCounted('expenses'),

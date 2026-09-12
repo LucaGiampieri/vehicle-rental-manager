@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,12 +25,14 @@ class VehicleController extends Controller
         // Recupera esclusivamente i filtri validati
         $filters = $request->validated();
 
-        // Prepara la query e aggiunge i conteggi delle relazioni
+        // Prepara la query, la copertina e i conteggi
         $query = Vehicle::query()
+            ->with('primaryImage')
             ->withCount([
                 'rentals',
                 'expenses',
                 'parkingSpaces',
+                'images',
             ]);
 
         // Cerca contemporaneamente per targa, marca o modello
@@ -38,9 +41,21 @@ class VehicleController extends Controller
 
             $query->where(function (Builder $query) use ($search): void {
                 $query
-                    ->where('license_plate', 'like', "%{$search}%")
-                    ->orWhere('brand', 'like', "%{$search}%")
-                    ->orWhere('model', 'like', "%{$search}%");
+                    ->where(
+                        'license_plate',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'brand',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'model',
+                        'like',
+                        "%{$search}%"
+                    );
             });
         }
 
@@ -51,7 +66,10 @@ class VehicleController extends Controller
 
         // Filtra i veicoli attivi oppure quelli disattivati
         if (array_key_exists('is_active', $filters)) {
-            $query->where('is_active', $filters['is_active']);
+            $query->where(
+                'is_active',
+                $filters['is_active']
+            );
         }
 
         // Permette di scegliere la dimensione della pagina
@@ -66,9 +84,10 @@ class VehicleController extends Controller
     }
 
     // Crea un nuovo veicolo
-    public function store(StoreVehicleRequest $request): JsonResponse
-    {
-        // validated restituisce soltanto i dati che hanno superato le regole
+    public function store(
+        StoreVehicleRequest $request
+    ): JsonResponse {
+        // Restituisce soltanto i dati che hanno superato la validazione
         $vehicle = Vehicle::create(
             $request->validated()
         );
@@ -76,33 +95,45 @@ class VehicleController extends Controller
         // Rilegge i valori predefiniti assegnati dal database
         $vehicle->refresh();
 
-        // Carica i conteggi iniziali delle relazioni
+        // Il nuovo veicolo non possiede ancora fotografie
+        $vehicle->load([
+            'primaryImage',
+            'images',
+        ]);
+
         $vehicle->loadCount([
             'rentals',
             'expenses',
             'parkingSpaces',
+            'images',
         ]);
 
-        // Restituisce il veicolo con il codice HTTP 201 Created
         return (new VehicleResource($vehicle))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
     // Restituisce un singolo veicolo
-    public function show(Vehicle $vehicle): VehicleResource
-    {
-        // Carica i conteggi collegati al veicolo richiesto
+    public function show(
+        Vehicle $vehicle
+    ): VehicleResource {
+        // Carica copertina e galleria completa
+        $vehicle->load([
+            'primaryImage',
+            'images',
+        ]);
+
         $vehicle->loadCount([
             'rentals',
             'expenses',
             'parkingSpaces',
+            'images',
         ]);
 
         return new VehicleResource($vehicle);
     }
 
-    // /Modifica un veicolo esistente
+    // Modifica un veicolo esistente
     public function update(
         UpdateVehicleRequest $request,
         Vehicle $vehicle
@@ -140,7 +171,8 @@ class VehicleController extends Controller
              */
             if (
                 array_key_exists('parking_units', $data)
-                && $data['parking_units'] !== $lockedVehicle->parking_units
+                && $data['parking_units']
+                    !== $lockedVehicle->parking_units
                 && $lockedVehicle->parkingSpaces()->exists()
             ) {
                 throw ValidationException::withMessages([
@@ -155,36 +187,51 @@ class VehicleController extends Controller
             return $lockedVehicle;
         });
 
-        // Rilegge il veicolo e aggiorna i conteggi delle relazioni
+        // Rilegge il veicolo dopo la modifica
         $vehicle->refresh();
+
+        // Restituisce anche copertina e galleria
+        $vehicle->load([
+            'primaryImage',
+            'images',
+        ]);
+
         $vehicle->loadCount([
             'rentals',
             'expenses',
             'parkingSpaces',
+            'images',
         ]);
 
         return new VehicleResource($vehicle);
     }
 
     // Elimina un veicolo soltanto quando non possiede dati collegati
-    public function destroy(Vehicle $vehicle): Response
-    {
-        // Controlla se il veicolo possiede noleggi, spese o celle dell'autorimessa
+    public function destroy(
+        Vehicle $vehicle
+    ): Response {
+        // Controlla noleggi, spese e occupazione dell’autorimessa
         $hasRelatedData = $vehicle->rentals()->exists()
             || $vehicle->expenses()->exists()
             || $vehicle->parkingSpaces()->exists();
 
-        // Impedisce di eliminare un veicolo che possiede dati importanti
         if ($hasRelatedData) {
             return response()->json([
                 'message' => 'Il veicolo non può essere eliminato perché possiede noleggi, spese o celle dell’autorimessa collegate. Rimuovilo dall’autorimessa oppure disattivalo.',
             ], Response::HTTP_CONFLICT);
         }
 
-        // Elimina definitivamente il veicolo
+        // Conserva i percorsi prima della cancellazione dal database
+        $imagePaths = $vehicle
+            ->images()
+            ->pluck('path')
+            ->all();
+
         $vehicle->delete();
 
-        // Restituisce 204 perché l'eliminazione è riuscita e non ci sono dati da mostrare
+        // Elimina anche i file fisici delle immagini
+        Storage::disk('public')->delete($imagePaths);
+
         return response()->noContent();
     }
 }

@@ -6,7 +6,9 @@ use App\Models\Expense;
 use App\Models\ParkingSpace;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -483,5 +485,108 @@ class VehicleApiTest extends TestCase
         $this->assertDatabaseHas('expenses', [
             'vehicle_id' => $vehicle->id,
         ]);
+    }
+
+    // Restituisce copertina, numero immagini e galleria del veicolo
+    public function test_vehicle_responses_include_images(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $vehicle = Vehicle::factory()->create();
+
+        $primaryImage = VehicleImage::factory()
+            ->for($vehicle)
+            ->primary()
+            ->create([
+                'sort_order' => 1,
+            ]);
+
+        $secondaryImage = VehicleImage::factory()
+            ->for($vehicle)
+            ->create([
+                'sort_order' => 2,
+            ]);
+
+        // Nell’elenco vengono restituite copertina e quantità
+        $listResponse = $this->getJson('/api/vehicles');
+
+        $listResponse->assertOk();
+        $listResponse->assertJsonPath(
+            'data.0.primary_image.id',
+            $primaryImage->id
+        );
+        $listResponse->assertJsonPath(
+            'data.0.images_count',
+            2
+        );
+
+        // Nella scheda viene restituita anche la galleria completa
+        $showResponse = $this->getJson(
+            "/api/vehicles/{$vehicle->id}"
+        );
+
+        $showResponse->assertOk();
+        $showResponse->assertJsonPath(
+            'data.primary_image.id',
+            $primaryImage->id
+        );
+        $showResponse->assertJsonPath(
+            'data.images_count',
+            2
+        );
+        $showResponse->assertJsonCount(
+            2,
+            'data.images'
+        );
+        $showResponse->assertJsonPath(
+            'data.images.0.id',
+            $primaryImage->id
+        );
+        $showResponse->assertJsonPath(
+            'data.images.1.id',
+            $secondaryImage->id
+        );
+    }
+
+    // Eliminando un veicolo vengono eliminati anche i file delle immagini
+    public function test_deleting_vehicle_removes_its_image_files(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $vehicle = Vehicle::factory()->create();
+
+        $path = "vehicles/{$vehicle->id}/vehicle.jpg";
+
+        Storage::disk('public')->put(
+            $path,
+            'image content'
+        );
+
+        $image = VehicleImage::factory()
+            ->for($vehicle)
+            ->primary()
+            ->create([
+                'path' => $path,
+            ]);
+
+        $response = $this->deleteJson(
+            "/api/vehicles/{$vehicle->id}"
+        );
+
+        $response->assertNoContent();
+
+        $this->assertDatabaseMissing('vehicles', [
+            'id' => $vehicle->id,
+        ]);
+
+        $this->assertDatabaseMissing('vehicle_images', [
+            'id' => $image->id,
+        ]);
+
+        Storage::disk('public')->assertMissing($path);
     }
 }

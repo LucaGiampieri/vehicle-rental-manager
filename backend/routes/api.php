@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\GarageController;
 use App\Http\Controllers\Api\ParkingSpaceController;
 use App\Http\Controllers\Api\RentalController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\VehicleImageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -64,6 +65,30 @@ Route::middleware(['auth:sanctum'])->group(function () {
         'dashboard',
         [DashboardController::class, 'index']
     )->name('dashboard.index');
+
+    // Restituisce la galleria fotografica di un veicolo
+    Route::get(
+        'vehicles/{vehicle}/images',
+        [VehicleImageController::class, 'index']
+    )->name('vehicles.images.index');
+
+    // Carica una fotografia nella galleria del veicolo
+    Route::post(
+        'vehicles/{vehicle}/images',
+        [VehicleImageController::class, 'store']
+    )->name('vehicles.images.store');
+
+    // Modifica i dati di una fotografia
+    Route::patch(
+        'vehicle-images/{vehicleImage}',
+        [VehicleImageController::class, 'update']
+    )->name('vehicle-images.update');
+
+    // Elimina una fotografia
+    Route::delete(
+        'vehicle-images/{vehicleImage}',
+        [VehicleImageController::class, 'destroy']
+    )->name('vehicle-images.destroy');
 
     // Registra la consegna del mezzo
     Route::patch(

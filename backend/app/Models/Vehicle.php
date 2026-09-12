@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Vehicle extends Model
 {
@@ -100,5 +101,21 @@ class Vehicle extends Model
     public function parkingSpaces(): HasMany
     {
         return $this->hasMany(ParkingSpace::class);
+    }
+
+    // Restituisce tutte le immagini del veicolo nell’ordine della galleria
+    public function images(): HasMany
+    {
+        return $this->hasMany(VehicleImage::class)
+            ->orderByDesc('is_primary')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    // Restituisce la fotografia principale del veicolo
+    public function primaryImage(): HasOne
+    {
+        return $this->hasOne(VehicleImage::class)
+            ->where('is_primary', true);
     }
 }
