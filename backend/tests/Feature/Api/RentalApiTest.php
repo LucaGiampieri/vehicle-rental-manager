@@ -80,6 +80,225 @@ class RentalApiTest extends TestCase
         ]);
     }
 
+    // Verifica la ricerca attraverso cliente e veicolo
+    public function test_rentals_can_be_searched(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create([
+            'license_plate' => 'RENT-001',
+            'brand' => 'Fiat',
+            'model' => 'Panda',
+        ]);
+
+        $customer = Customer::factory()->create([
+            'first_name' => 'Mario',
+            'last_name' => 'Rossi',
+        ]);
+
+        $expectedRental = Rental::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'customer_id' => $customer->id,
+        ]);
+
+        $otherVehicle = Vehicle::factory()->create([
+            'license_plate' => 'OTHER-001',
+            'brand' => 'Ford',
+            'model' => 'Transit',
+        ]);
+
+        $otherCustomer = Customer::factory()->create([
+            'first_name' => 'Luca',
+            'last_name' => 'Bianchi',
+        ]);
+
+        Rental::factory()->create([
+            'vehicle_id' => $otherVehicle->id,
+            'customer_id' => $otherCustomer->id,
+        ]);
+
+        // Cerca usando nome e cognome del cliente
+        $customerResponse = $this->getJson(
+            '/api/rentals?search=Mario%20Rossi'
+        );
+
+        $customerResponse->assertOk();
+        $customerResponse->assertJsonCount(1, 'data');
+        $customerResponse->assertJsonPath(
+            'data.0.id',
+            $expectedRental->id
+        );
+
+        // Cerca usando la targa del veicolo
+        $vehicleResponse = $this->getJson(
+            '/api/rentals?search=RENT-001'
+        );
+
+        $vehicleResponse->assertOk();
+        $vehicleResponse->assertJsonCount(1, 'data');
+        $vehicleResponse->assertJsonPath(
+            'data.0.id',
+            $expectedRental->id
+        );
+    }
+
+    // Verifica i filtri combinati per stato, veicolo e cliente
+    public function test_rentals_can_be_filtered_by_status_vehicle_and_customer(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create();
+        $customer = Customer::factory()->create();
+
+        $expectedRental = Rental::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'customer_id' => $customer->id,
+            'status' => Rental::STATUS_ACTIVE,
+            'actual_starts_at' => now(),
+            'start_mileage' => $vehicle->mileage,
+        ]);
+
+        Rental::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'status' => Rental::STATUS_RESERVED,
+        ]);
+
+        Rental::factory()->create([
+            'customer_id' => $customer->id,
+            'status' => Rental::STATUS_ACTIVE,
+            'actual_starts_at' => now(),
+            'start_mileage' => 10000,
+        ]);
+
+        $response = $this->getJson(
+            "/api/rentals?status=active&vehicle_id={$vehicle->id}&customer_id={$customer->id}"
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath(
+            'data.0.id',
+            $expectedRental->id
+        );
+        $response->assertJsonPath(
+            'data.0.status',
+            Rental::STATUS_ACTIVE
+        );
+    }
+
+    // Verifica la ricerca dei noleggi sovrapposti a un intervallo
+    public function test_rentals_can_be_filtered_by_date_range(): void
+    {
+        $this->authenticateUser();
+
+        $dateFrom = now()
+            ->addMonth()
+            ->startOfDay();
+
+        $dateTo = $dateFrom
+            ->copy()
+            ->addDays(10)
+            ->endOfDay();
+
+        $expectedRental = Rental::factory()->create([
+            'starts_at' => $dateFrom
+                ->copy()
+                ->subDays(2),
+            'expected_ends_at' => $dateFrom
+                ->copy()
+                ->addDays(2),
+        ]);
+
+        // Termina prima dell’intervallo richiesto
+        Rental::factory()->create([
+            'starts_at' => $dateFrom
+                ->copy()
+                ->subDays(10),
+            'expected_ends_at' => $dateFrom
+                ->copy()
+                ->subDay(),
+        ]);
+
+        // Inizia dopo l’intervallo richiesto
+        Rental::factory()->create([
+            'starts_at' => $dateTo
+                ->copy()
+                ->addDay(),
+            'expected_ends_at' => $dateTo
+                ->copy()
+                ->addDays(3),
+        ]);
+
+        $queryString = http_build_query([
+            'date_from' => $dateFrom->toDateString(),
+            'date_to' => $dateTo->toDateString(),
+        ]);
+
+        $response = $this->getJson(
+            "/api/rentals?{$queryString}"
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath(
+            'data.0.id',
+            $expectedRental->id
+        );
+    }
+
+    // Verifica la paginazione configurabile dei noleggi
+    public function test_rental_list_supports_custom_pagination(): void
+    {
+        $this->authenticateUser();
+
+        Rental::factory()
+            ->count(5)
+            ->create();
+
+        $response = $this->getJson(
+            '/api/rentals?per_page=2'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+        $response->assertJsonPath('meta.per_page', 2);
+        $response->assertJsonPath('meta.total', 5);
+        $response->assertJsonPath('meta.last_page', 3);
+    }
+
+    // Verifica che i filtri non validi vengano rifiutati
+    public function test_rental_filters_require_valid_values(): void
+    {
+        $this->authenticateUser();
+
+        $search = str_repeat('A', 101);
+
+        $queryString = http_build_query([
+            'search' => $search,
+            'status' => 'unknown',
+            'vehicle_id' => 999999,
+            'customer_id' => 999999,
+            'date_from' => '2026-09-20',
+            'date_to' => '2026-09-10',
+            'per_page' => 101,
+        ]);
+
+        $response = $this->getJson(
+            "/api/rentals?{$queryString}"
+        );
+
+        $response->assertUnprocessable();
+
+        $response->assertJsonValidationErrors([
+            'search',
+            'status',
+            'vehicle_id',
+            'customer_id',
+            'date_to',
+            'per_page',
+        ]);
+    }
+
     // Verifica la creazione e il calcolo automatico del totale
     public function test_authenticated_user_can_create_rental(): void
     {

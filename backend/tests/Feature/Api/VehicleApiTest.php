@@ -73,6 +73,116 @@ class VehicleApiTest extends TestCase
         ]);
     }
 
+    // Verifica la ricerca per targa, marca oppure modello
+    public function test_vehicles_can_be_searched(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $expectedVehicle = Vehicle::factory()->create([
+            'license_plate' => 'AA111BB',
+            'brand' => 'Fiat',
+            'model' => 'Panda',
+        ]);
+
+        Vehicle::factory()->create([
+            'license_plate' => 'CC222DD',
+            'brand' => 'Ford',
+            'model' => 'Transit',
+        ]);
+
+        $response = $this->getJson(
+            '/api/vehicles?search=panda'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath(
+            'data.0.id',
+            $expectedVehicle->id
+        );
+    }
+
+    // Verifica i filtri per tipo e stato del veicolo
+    public function test_vehicles_can_be_filtered_by_type_and_active_status(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $expectedVehicle = Vehicle::factory()->create([
+            'license_plate' => 'EE333FF',
+            'type' => Vehicle::TYPE_CAR,
+            'is_active' => false,
+        ]);
+
+        Vehicle::factory()->create([
+            'license_plate' => 'GG444HH',
+            'type' => Vehicle::TYPE_CAR,
+            'is_active' => true,
+        ]);
+
+        Vehicle::factory()->create([
+            'license_plate' => 'II555JJ',
+            'type' => Vehicle::TYPE_VAN,
+            'is_active' => false,
+        ]);
+
+        $response = $this->getJson(
+            '/api/vehicles?type=car&is_active=false'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath(
+            'data.0.id',
+            $expectedVehicle->id
+        );
+        $response->assertJsonPath(
+            'data.0.is_active',
+            false
+        );
+    }
+
+    // Verifica che sia possibile scegliere la dimensione della pagina
+    public function test_vehicle_list_supports_custom_pagination(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        Vehicle::factory()
+            ->count(5)
+            ->create();
+
+        $response = $this->getJson(
+            '/api/vehicles?per_page=2'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+        $response->assertJsonPath('meta.per_page', 2);
+        $response->assertJsonPath('meta.total', 5);
+        $response->assertJsonPath('meta.last_page', 3);
+    }
+
+    // Verifica che i filtri non validi vengano rifiutati
+    public function test_vehicle_filters_require_valid_values(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson(
+            '/api/vehicles?type=spaceship&is_active=maybe&per_page=101'
+        );
+
+        $response->assertUnprocessable();
+
+        $response->assertJsonValidationErrors([
+            'type',
+            'is_active',
+            'per_page',
+        ]);
+    }
+
     // Verifica che un utente autenticato possa creare un veicolo
     public function test_authenticated_user_can_create_vehicle(): void
     {

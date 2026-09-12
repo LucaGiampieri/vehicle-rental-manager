@@ -61,6 +61,112 @@ class CustomerApiTest extends TestCase
         ]);
     }
 
+    // Verifica la ricerca dei clienti usando nome e cognome
+    public function test_customers_can_be_searched(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $expectedCustomer = Customer::factory()->create([
+            'first_name' => 'Mario',
+            'last_name' => 'Rossi',
+            'email' => 'mario.rossi@example.com',
+        ]);
+
+        Customer::factory()->create([
+            'first_name' => 'Luca',
+            'last_name' => 'Bianchi',
+            'email' => 'luca.bianchi@example.com',
+        ]);
+
+        $response = $this->getJson(
+            '/api/customers?search=Mario%20Rossi'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath(
+            'data.0.id',
+            $expectedCustomer->id
+        );
+    }
+
+    // Verifica il filtro per stato del cliente
+    public function test_customers_can_be_filtered_by_active_status(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $expectedCustomer = Customer::factory()->create([
+            'first_name' => 'Cliente',
+            'last_name' => 'Disattivato',
+            'is_active' => false,
+        ]);
+
+        Customer::factory()->create([
+            'first_name' => 'Cliente',
+            'last_name' => 'Attivo',
+            'is_active' => true,
+        ]);
+
+        $response = $this->getJson(
+            '/api/customers?is_active=false'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath(
+            'data.0.id',
+            $expectedCustomer->id
+        );
+        $response->assertJsonPath(
+            'data.0.is_active',
+            false
+        );
+    }
+
+    // Verifica la paginazione configurabile dei clienti
+    public function test_customer_list_supports_custom_pagination(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        Customer::factory()
+            ->count(5)
+            ->create();
+
+        $response = $this->getJson(
+            '/api/customers?per_page=2'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+        $response->assertJsonPath('meta.per_page', 2);
+        $response->assertJsonPath('meta.total', 5);
+        $response->assertJsonPath('meta.last_page', 3);
+    }
+
+    // Verifica che i filtri non validi vengano rifiutati
+    public function test_customer_filters_require_valid_values(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $search = str_repeat('A', 101);
+
+        $response = $this->getJson(
+            "/api/customers?search={$search}&is_active=maybe&per_page=101"
+        );
+
+        $response->assertUnprocessable();
+
+        $response->assertJsonValidationErrors([
+            'search',
+            'is_active',
+            'per_page',
+        ]);
+    }
+
     // Verifica che un utente autenticato possa creare un cliente
     public function test_authenticated_user_can_create_customer(): void
     {

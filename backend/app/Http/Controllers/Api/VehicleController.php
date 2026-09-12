@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\IndexVehicleRequest;
 use App\Http\Requests\Api\StoreVehicleRequest;
 use App\Http\Requests\Api\UpdateVehicleRequest;
 use App\Http\Resources\VehicleResource;
 use App\Models\Vehicle;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -15,20 +17,51 @@ use Symfony\Component\HttpFoundation\Response;
 
 class VehicleController extends Controller
 {
-    // Restituisce l'elenco paginato dei veicoli
-    public function index(): AnonymousResourceCollection
-    {
-        // Carica i veicoli e conta le relazioni senza recuperare tutti i record
-        $vehicles = Vehicle::query()
+    // Restituisce l’elenco ricercabile, filtrabile e paginato dei veicoli
+    public function index(
+        IndexVehicleRequest $request
+    ): AnonymousResourceCollection {
+        // Recupera esclusivamente i filtri validati
+        $filters = $request->validated();
+
+        // Prepara la query e aggiunge i conteggi delle relazioni
+        $query = Vehicle::query()
             ->withCount([
                 'rentals',
                 'expenses',
                 'parkingSpaces',
-            ])
-            ->orderBy('license_plate')
-            ->paginate(15);
+            ]);
 
-        // Trasforma ogni veicolo tramite VehicleResource
+        // Cerca contemporaneamente per targa, marca o modello
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+
+            $query->where(function (Builder $query) use ($search): void {
+                $query
+                    ->where('license_plate', 'like', "%{$search}%")
+                    ->orWhere('brand', 'like', "%{$search}%")
+                    ->orWhere('model', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtra per tipo di veicolo
+        if (! empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        // Filtra i veicoli attivi oppure quelli disattivati
+        if (array_key_exists('is_active', $filters)) {
+            $query->where('is_active', $filters['is_active']);
+        }
+
+        // Permette di scegliere la dimensione della pagina
+        $perPage = $filters['per_page'] ?? 15;
+
+        $vehicles = $query
+            ->orderBy('license_plate')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return VehicleResource::collection($vehicles);
     }
 

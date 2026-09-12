@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ActivateRentalRequest;
 use App\Http\Requests\Api\CompleteRentalRequest;
+use App\Http\Requests\Api\IndexRentalRequest;
 use App\Http\Requests\Api\StoreRentalRequest;
 use App\Http\Requests\Api\UpdateRentalRequest;
 use App\Http\Resources\RentalResource;
@@ -14,6 +15,7 @@ use App\Models\Rental;
 use App\Models\Vehicle;
 use App\Services\GarageService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -23,18 +25,153 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RentalController extends Controller
 {
-    // Restituisce l'elenco paginato dei noleggi
-    public function index(): AnonymousResourceCollection
-    {
-        // Carica insieme al noleggio anche veicolo e cliente
-        // per evitare query aggiuntive durante la creazione del JSON
-        $rentals = Rental::query()
+    // Restituisce l’elenco ricercabile, filtrabile e paginato dei noleggi
+    public function index(
+        IndexRentalRequest $request
+    ): AnonymousResourceCollection {
+        // Recupera esclusivamente i filtri validati
+        $filters = $request->validated();
+
+        // Carica subito veicolo e cliente per evitare query aggiuntive
+        $query = Rental::query()
             ->with([
                 'vehicle',
                 'customer',
-            ])
+            ]);
+
+        /*
+         * Cerca nei dati del veicolo e del cliente.
+         * Se viene inserito un numero, cerca anche l’ID del noleggio.
+         */
+        if (! empty($filters['search'])) {
+            $searchTerms = preg_split(
+                '/\s+/',
+                $filters['search'],
+                flags: PREG_SPLIT_NO_EMPTY
+            );
+
+            foreach ($searchTerms as $searchTerm) {
+                $query->where(
+                    function (Builder $query) use ($searchTerm): void {
+                        $query
+                            ->whereHas(
+                                'vehicle',
+                                function (Builder $vehicleQuery) use (
+                                    $searchTerm
+                                ): void {
+                                    $vehicleQuery
+                                        ->where(
+                                            'license_plate',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        )
+                                        ->orWhere(
+                                            'brand',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        )
+                                        ->orWhere(
+                                            'model',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        );
+                                }
+                            )
+                            ->orWhereHas(
+                                'customer',
+                                function (Builder $customerQuery) use (
+                                    $searchTerm
+                                ): void {
+                                    $customerQuery
+                                        ->where(
+                                            'first_name',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        )
+                                        ->orWhere(
+                                            'last_name',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        )
+                                        ->orWhere(
+                                            'email',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        )
+                                        ->orWhere(
+                                            'phone',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        )
+                                        ->orWhere(
+                                            'tax_code',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        )
+                                        ->orWhere(
+                                            'driving_license_number',
+                                            'like',
+                                            "%{$searchTerm}%"
+                                        );
+                                }
+                            );
+
+                        if (ctype_digit($searchTerm)) {
+                            $query->orWhereKey((int) $searchTerm);
+                        }
+                    }
+                );
+            }
+        }
+
+        // Filtra per stato
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        // Filtra per veicolo
+        if (! empty($filters['vehicle_id'])) {
+            $query->where(
+                'vehicle_id',
+                $filters['vehicle_id']
+            );
+        }
+
+        // Filtra per cliente
+        if (! empty($filters['customer_id'])) {
+            $query->where(
+                'customer_id',
+                $filters['customer_id']
+            );
+        }
+
+        /*
+         * Include i noleggi che si sovrappongono
+         * all’intervallo di date richiesto.
+         */
+        if (! empty($filters['date_from'])) {
+            $query->where(
+                'expected_ends_at',
+                '>=',
+                Carbon::parse($filters['date_from'])->startOfDay()
+            );
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->where(
+                'starts_at',
+                '<=',
+                Carbon::parse($filters['date_to'])->endOfDay()
+            );
+        }
+
+        // Permette di scegliere la dimensione della pagina
+        $perPage = $filters['per_page'] ?? 15;
+
+        $rentals = $query
             ->orderByDesc('starts_at')
-            ->paginate(15);
+            ->paginate($perPage)
+            ->withQueryString();
 
         return RentalResource::collection($rentals);
     }

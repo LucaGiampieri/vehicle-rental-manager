@@ -458,6 +458,56 @@ class ExpenseApiTest extends TestCase
         );
     }
 
+    // Verifica la paginazione configurabile delle spese
+    public function test_expense_list_supports_custom_pagination(): void
+    {
+        $this->authenticateUser();
+
+        Expense::factory()
+            ->count(5)
+            ->create();
+
+        $response = $this->getJson(
+            '/api/expenses?per_page=2'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+        $response->assertJsonPath('meta.per_page', 2);
+        $response->assertJsonPath('meta.total', 5);
+        $response->assertJsonPath('meta.last_page', 3);
+    }
+
+    // Verifica che i filtri non validi vengano rifiutati
+    public function test_expense_filters_require_valid_values(): void
+    {
+        $this->authenticateUser();
+
+        $search = str_repeat('A', 101);
+
+        $queryString = http_build_query([
+            'vehicle_id' => 999999,
+            'category' => 'invalid_category',
+            'expires_before' => 'invalid-date',
+            'search' => $search,
+            'per_page' => 101,
+        ]);
+
+        $response = $this->getJson(
+            "/api/expenses?{$queryString}"
+        );
+
+        $response->assertUnprocessable();
+
+        $response->assertJsonValidationErrors([
+            'vehicle_id',
+            'category',
+            'expires_before',
+            'search',
+            'per_page',
+        ]);
+    }
+
     // Verifica che l'intervallo dei filtri sia coerente
     public function test_expense_filter_rejects_invalid_date_range(): void
     {

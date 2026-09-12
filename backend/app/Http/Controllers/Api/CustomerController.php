@@ -3,27 +3,93 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\IndexCustomerRequest;
 use App\Http\Requests\Api\StoreCustomerRequest;
 use App\Http\Requests\Api\UpdateCustomerRequest;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\Response;
 
 class CustomerController extends Controller
 {
-    // Restituisce l'elenco paginato dei clienti
-    public function index(): AnonymousResourceCollection
-    {
-        // Carica i clienti e conta i noleggi senza recuperare tutti i record
-        $customers = Customer::query()
-            ->withCount('rentals')
+    // Restituisce l’elenco ricercabile, filtrabile e paginato dei clienti
+    public function index(
+        IndexCustomerRequest $request
+    ): AnonymousResourceCollection {
+        // Recupera esclusivamente i filtri validati
+        $filters = $request->validated();
+
+        // Prepara la query e aggiunge il conteggio dei noleggi
+        $query = Customer::query()
+            ->withCount('rentals');
+
+        /*
+         * Cerca nome, cognome, email, telefono,
+         * codice fiscale e numero della patente.
+         */
+        if (! empty($filters['search'])) {
+            $searchTerms = preg_split(
+                '/\s+/',
+                $filters['search'],
+                flags: PREG_SPLIT_NO_EMPTY
+            );
+
+            foreach ($searchTerms as $searchTerm) {
+                $query->where(
+                    function (Builder $query) use ($searchTerm): void {
+                        $query
+                            ->where(
+                                'first_name',
+                                'like',
+                                "%{$searchTerm}%"
+                            )
+                            ->orWhere(
+                                'last_name',
+                                'like',
+                                "%{$searchTerm}%"
+                            )
+                            ->orWhere(
+                                'email',
+                                'like',
+                                "%{$searchTerm}%"
+                            )
+                            ->orWhere(
+                                'phone',
+                                'like',
+                                "%{$searchTerm}%"
+                            )
+                            ->orWhere(
+                                'tax_code',
+                                'like',
+                                "%{$searchTerm}%"
+                            )
+                            ->orWhere(
+                                'driving_license_number',
+                                'like',
+                                "%{$searchTerm}%"
+                            );
+                    }
+                );
+            }
+        }
+
+        // Filtra i clienti attivi oppure disattivati
+        if (array_key_exists('is_active', $filters)) {
+            $query->where('is_active', $filters['is_active']);
+        }
+
+        // Permette di scegliere la dimensione della pagina
+        $perPage = $filters['per_page'] ?? 15;
+
+        $customers = $query
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->paginate(15);
+            ->paginate($perPage)
+            ->withQueryString();
 
-        // Trasforma ogni cliente tramite CustomerResource
         return CustomerResource::collection($customers);
     }
 
