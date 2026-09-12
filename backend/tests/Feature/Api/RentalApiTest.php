@@ -372,6 +372,170 @@ class RentalApiTest extends TestCase
         $this->assertNull($savedRental->end_mileage);
     }
 
+    // Verifica la conversione in UTC durante la creazione
+    public function test_rental_dates_are_normalized_to_utc_when_created(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $customer = Customer::factory()->create([
+            'is_active' => true,
+            'driving_license_expiry_date' => now()
+                ->addYears(2)
+                ->toDateString(),
+        ]);
+
+        /*
+         * Simula gli orari inviati da un browser italiano.
+         * Carbon applicherà automaticamente +01:00 oppure +02:00.
+         */
+        $localStartsAt = now()
+            ->addDays(3)
+            ->setTimezone('Europe/Rome')
+            ->startOfHour();
+
+        $localExpectedEndsAt = $localStartsAt
+            ->copy()
+            ->addHours(48);
+
+        $expectedStartsAtUtc = $localStartsAt
+            ->copy()
+            ->utc();
+
+        $expectedEndsAtUtc = $localExpectedEndsAt
+            ->copy()
+            ->utc();
+
+        $response = $this->postJson('/api/rentals', [
+            'vehicle_id' => $vehicle->id,
+            'customer_id' => $customer->id,
+            'starts_at' => $localStartsAt->format(
+                'Y-m-d\TH:i:sP'
+            ),
+            'expected_ends_at' => $localExpectedEndsAt->format(
+                'Y-m-d\TH:i:sP'
+            ),
+            'daily_rate' => 50,
+        ]);
+
+        $response->assertCreated();
+
+        // L’API deve restituire gli orari convertiti in UTC
+        $response->assertJsonPath(
+            'data.starts_at',
+            $expectedStartsAtUtc->toISOString()
+        );
+
+        $response->assertJsonPath(
+            'data.expected_ends_at',
+            $expectedEndsAtUtc->toISOString()
+        );
+
+        $savedRental = Rental::findOrFail(
+            $response->json('data.id')
+        );
+
+        // Anche il database deve contenere gli orari UTC
+        $this->assertSame(
+            $expectedStartsAtUtc->format('Y-m-d H:i:s'),
+            $savedRental->starts_at
+                ->utc()
+                ->format('Y-m-d H:i:s')
+        );
+
+        $this->assertSame(
+            $expectedEndsAtUtc->format('Y-m-d H:i:s'),
+            $savedRental->expected_ends_at
+                ->utc()
+                ->format('Y-m-d H:i:s')
+        );
+    }
+
+    // Verifica la conversione in UTC durante la modifica
+    public function test_rental_dates_are_normalized_to_utc_when_updated(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $customer = Customer::factory()->create([
+            'is_active' => true,
+            'driving_license_expiry_date' => now()
+                ->addYears(2)
+                ->toDateString(),
+        ]);
+
+        $rental = Rental::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'customer_id' => $customer->id,
+            'status' => Rental::STATUS_RESERVED,
+            'starts_at' => now()->addDays(3),
+            'expected_ends_at' => now()->addDays(5),
+        ]);
+
+        $localStartsAt = now()
+            ->addDays(7)
+            ->setTimezone('Europe/Rome')
+            ->startOfHour();
+
+        $localExpectedEndsAt = $localStartsAt
+            ->copy()
+            ->addHours(72);
+
+        $expectedStartsAtUtc = $localStartsAt
+            ->copy()
+            ->utc();
+
+        $expectedEndsAtUtc = $localExpectedEndsAt
+            ->copy()
+            ->utc();
+
+        $response = $this->patchJson(
+            "/api/rentals/{$rental->id}",
+            [
+                'starts_at' => $localStartsAt->format(
+                    'Y-m-d\TH:i:sP'
+                ),
+                'expected_ends_at' => $localExpectedEndsAt->format(
+                    'Y-m-d\TH:i:sP'
+                ),
+            ]
+        );
+
+        $response->assertOk();
+
+        $response->assertJsonPath(
+            'data.starts_at',
+            $expectedStartsAtUtc->toISOString()
+        );
+
+        $response->assertJsonPath(
+            'data.expected_ends_at',
+            $expectedEndsAtUtc->toISOString()
+        );
+
+        $updatedRental = $rental->fresh();
+
+        $this->assertSame(
+            $expectedStartsAtUtc->format('Y-m-d H:i:s'),
+            $updatedRental->starts_at
+                ->utc()
+                ->format('Y-m-d H:i:s')
+        );
+
+        $this->assertSame(
+            $expectedEndsAtUtc->format('Y-m-d H:i:s'),
+            $updatedRental->expected_ends_at
+                ->utc()
+                ->format('Y-m-d H:i:s')
+        );
+    }
+
     // Verifica le regole di base della creazione
     public function test_rental_creation_requires_valid_data(): void
     {

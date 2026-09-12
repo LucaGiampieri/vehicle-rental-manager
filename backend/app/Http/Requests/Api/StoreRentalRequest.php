@@ -109,13 +109,14 @@ class StoreRentalRequest extends FormRequest
                 return;
             }
 
+            // Converte gli orari ricevuti nel fuso UTC
             $startsAt = Carbon::parse(
                 $this->input('starts_at')
-            );
+            )->utc();
 
             $expectedEndsAt = Carbon::parse(
                 $this->input('expected_ends_at')
-            );
+            )->utc();
 
             // Un mezzo disattivato non può essere prenotato
             if (! $vehicle->is_active) {

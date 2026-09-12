@@ -182,11 +182,18 @@ class RentalController extends Controller
         // Recupera soltanto i dati che hanno superato la validazione
         $data = $request->validated();
 
-        // Trasforma le date ricevute in oggetti Carbon
-        $startsAt = Carbon::parse($data['starts_at']);
+        // Converte in UTC gli orari ricevuti dal frontend
+        $startsAt = Carbon::parse(
+            $data['starts_at']
+        )->utc();
+
         $expectedEndsAt = Carbon::parse(
             $data['expected_ends_at']
-        );
+        )->utc();
+
+        // Salva nel database i valori già normalizzati
+        $data['starts_at'] = $startsAt;
+        $data['expected_ends_at'] = $expectedEndsAt;
 
         // Imposta i valori controllati esclusivamente dal backend
         $data['status'] = Rental::STATUS_RESERVED;
@@ -285,16 +292,28 @@ class RentalController extends Controller
             $vehicleId = $data['vehicle_id']
                 ?? $rental->vehicle_id;
 
+            // Converte in UTC gli eventuali nuovi orari
             $startsAt = array_key_exists('starts_at', $data)
-                ? Carbon::parse($data['starts_at'])
-                : $rental->starts_at->copy();
+                ? Carbon::parse($data['starts_at'])->utc()
+                : $rental->starts_at->copy()->utc();
 
             $expectedEndsAt = array_key_exists(
                 'expected_ends_at',
                 $data
             )
-                ? Carbon::parse($data['expected_ends_at'])
-                : $rental->expected_ends_at->copy();
+                ? Carbon::parse(
+                    $data['expected_ends_at']
+                )->utc()
+                : $rental->expected_ends_at->copy()->utc();
+
+            // Sostituisce solamente gli orari realmente inviati
+            if (array_key_exists('starts_at', $data)) {
+                $data['starts_at'] = $startsAt;
+            }
+
+            if (array_key_exists('expected_ends_at', $data)) {
+                $data['expected_ends_at'] = $expectedEndsAt;
+            }
 
             $dailyRate = $data['daily_rate']
                 ?? $rental->daily_rate;

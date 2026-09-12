@@ -134,13 +134,16 @@ class UpdateRentalRequest extends FormRequest
                 ? $this->integer('customer_id')
                 : $rental->customer_id;
 
+            // Converte in UTC gli eventuali nuovi orari
             $startsAt = $this->exists('starts_at')
-                ? Carbon::parse($this->input('starts_at'))
-                : $rental->starts_at->copy();
+                ? Carbon::parse($this->input('starts_at'))->utc()
+                : $rental->starts_at->copy()->utc();
 
             $expectedEndsAt = $this->exists('expected_ends_at')
-                ? Carbon::parse($this->input('expected_ends_at'))
-                : $rental->expected_ends_at->copy();
+                ? Carbon::parse(
+                    $this->input('expected_ends_at')
+                )->utc()
+                : $rental->expected_ends_at->copy()->utc();
 
             $dailyRate = $this->exists('daily_rate')
                 ? $this->input('daily_rate')
