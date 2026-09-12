@@ -403,6 +403,15 @@ class RentalController extends Controller
                     ]);
                 }
 
+                // Ripete nella transazione il controllo sulla scadenza
+                if (now()->gte($lockedRental->expected_ends_at)) {
+                    throw ValidationException::withMessages([
+                        'rental' => [
+                            'Il periodo previsto del noleggio è già terminato.',
+                        ],
+                    ]);
+                }
+
                 $updates = [
                     'status' => Rental::STATUS_ACTIVE,
 
@@ -469,6 +478,14 @@ class RentalController extends Controller
         $data = $request->validated();
         $user = $request->user();
 
+        // Converte in UTC l’orario effettivo ricevuto dal frontend
+        $data['actual_ends_at'] = array_key_exists(
+            'actual_ends_at',
+            $data
+        )
+            ? Carbon::parse($data['actual_ends_at'])->utc()
+            : now();
+
         try {
             $rental = DB::transaction(function () use (
                 $rental,
@@ -516,8 +533,7 @@ class RentalController extends Controller
                     'status' => Rental::STATUS_COMPLETED,
 
                     // Se non viene fornito un orario usa quello attuale
-                    'actual_ends_at' => $data['actual_ends_at']
-                        ?? now(),
+                    'actual_ends_at' => $data['actual_ends_at'],
 
                     'end_mileage' => $data['end_mileage'],
                 ];

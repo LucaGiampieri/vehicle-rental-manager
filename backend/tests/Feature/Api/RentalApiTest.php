@@ -1048,6 +1048,65 @@ class RentalApiTest extends TestCase
         );
     }
 
+    // Converte in UTC anche l’orario effettivo del rientro
+    public function test_rental_completion_date_is_normalized_to_utc(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create([
+            'mileage' => 40000,
+        ]);
+
+        $actualStartsAt = now()
+            ->subDays(2)
+            ->startOfSecond();
+
+        $rental = Rental::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'status' => Rental::STATUS_ACTIVE,
+            'starts_at' => $actualStartsAt,
+            'actual_starts_at' => $actualStartsAt,
+            'expected_ends_at' => now()->addDay(),
+            'start_mileage' => 40000,
+        ]);
+
+        // Simula un orario inviato da un browser italiano
+        $localActualEndsAt = now()
+            ->subHour()
+            ->setTimezone('Europe/Rome')
+            ->startOfSecond();
+
+        $expectedUtc = $localActualEndsAt
+            ->copy()
+            ->utc();
+
+        $response = $this->patchJson(
+            "/api/rentals/{$rental->id}/complete",
+            [
+                'actual_ends_at' => $localActualEndsAt->format(
+                    'Y-m-d\TH:i:sP'
+                ),
+                'end_mileage' => 40500,
+            ]
+        );
+
+        $response->assertOk();
+
+        $response->assertJsonPath(
+            'data.actual_ends_at',
+            $expectedUtc->toISOString()
+        );
+
+        $savedRental = $rental->fresh();
+
+        $this->assertSame(
+            $expectedUtc->format('Y-m-d H:i:s'),
+            $savedRental->actual_ends_at
+                ->utc()
+                ->format('Y-m-d H:i:s')
+        );
+    }
+
     // Verifica che il chilometraggio non possa diminuire
     public function test_rental_cannot_be_completed_with_lower_mileage(): void
     {
