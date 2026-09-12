@@ -28,8 +28,7 @@ class DemoDataSeeder extends Seeder
                 ['email' => 'admin@example.com'],
                 [
                     'name' => 'Amministratore Demo',
-                    'password' => Hash::make('password'),
-                    'email_verified_at' => now(),
+                    'password' => Hash::make('PasswordDemo!2026'),
                 ]
             );
 

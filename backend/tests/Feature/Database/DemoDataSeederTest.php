@@ -5,10 +5,12 @@ namespace Tests\Feature\Database;
 use App\Models\ParkingMovement;
 use App\Models\ParkingSpace;
 use App\Models\Rental;
+use App\Models\User;
 use App\Models\Vehicle;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class DemoDataSeederTest extends TestCase
@@ -24,6 +26,18 @@ class DemoDataSeederTest extends TestCase
             'email' => 'admin@example.com',
             'name' => 'Amministratore Demo',
         ]);
+
+        // Verifica la password sicura dell’account dimostrativo
+        $demoUser = User::query()
+            ->where('email', 'admin@example.com')
+            ->firstOrFail();
+
+        $this->assertTrue(
+            Hash::check(
+                'PasswordDemo!2026',
+                $demoUser->password
+            )
+        );
 
         $this->assertDatabaseCount('vehicles', 4);
         $this->assertDatabaseCount('customers', 3);

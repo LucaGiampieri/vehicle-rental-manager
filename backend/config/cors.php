@@ -10,8 +10,6 @@ return [
         'logout',
         'forgot-password',
         'reset-password',
-        'verify-email/*',
-        'email/verification-notification',
     ],
 
     // Consente tutti i metodi HTTP, come GET, POST, PUT e DELETE
