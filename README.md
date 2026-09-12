@@ -6,6 +6,14 @@ Laravel REST API backend for a vehicle rental management system.
 
 The system manages vehicles, customers, reservations, rentals, expenses, garage spaces, photographs, and financial and operational statistics.
 
+## Project status
+
+The Laravel backend MVP is complete and covered by 161 automated tests.
+
+The React frontend is currently under development.
+
+## Technologies
+
 ## Technologies
 
 - PHP 8.2+
@@ -178,8 +186,8 @@ JSON body:
 
 ```json
 {
-    "email": "admin@example.com",
-    "password": "PasswordDemo!2026"
+  "email": "admin@example.com",
+  "password": "PasswordDemo!2026"
 }
 ```
 

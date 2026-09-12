@@ -6,6 +6,14 @@ Backend REST API per un gestionale di autonoleggio sviluppato con Laravel.
 
 Il sistema gestisce veicoli, clienti, prenotazioni, noleggi, costi, autorimessa, fotografie e statistiche economiche e operative.
 
+## Stato del progetto
+
+L’MVP del backend Laravel è completo ed è coperto da 161 test automatici.
+
+Il frontend React è attualmente in fase di sviluppo.
+
+## Tecnologie
+
 ## Tecnologie
 
 - PHP 8.2+
@@ -178,8 +186,8 @@ Corpo JSON:
 
 ```json
 {
-    "email": "admin@example.com",
-    "password": "PasswordDemo!2026"
+  "email": "admin@example.com",
+  "password": "PasswordDemo!2026"
 }
 ```
 
