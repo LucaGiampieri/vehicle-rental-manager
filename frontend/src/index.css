@@ -1,0 +1,39 @@
+/* Base minima: il resto dell'interfaccia usa Bootstrap e gli stili qui sotto. */
+body {
+  min-width: 320px;
+  margin: 0;
+}
+
+/* Loader condiviso durante la verifica iniziale della sessione. */
+
+.app-loader {
+  min-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #0d6efd;
+}
+
+.app-loader__car {
+  display: inline-block;
+  font-size: 3rem;
+  animation: car-bounce 1s ease-in-out infinite alternate;
+}
+
+@keyframes car-bounce {
+  from {
+    transform: translateY(4px);
+  }
+  to {
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Chi riduce le animazioni nel sistema vede comunque il messaggio di stato. */
+  .app-loader__car {
+    animation: none;
+  }
+}
