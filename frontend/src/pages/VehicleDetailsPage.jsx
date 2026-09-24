@@ -14,6 +14,15 @@ const VEHICLE_TYPE_LABELS = {
   other: "Altro",
 };
 
+// Traduce le categorie tecniche delle fotografie.
+const IMAGE_CATEGORY_LABELS = {
+  exterior: "Esterno",
+  interior: "Interno",
+  plate: "Targa",
+  damage: "Danno",
+  other: "Altro",
+};
+
 function VehicleDetailsPage() {
   // Legge il parametro dinamico presente nell'indirizzo.
   const { vehicleId } = useParams();
@@ -21,20 +30,352 @@ function VehicleDetailsPage() {
   // Conserva il veicolo restituito da Laravel.
   const [vehicle, setVehicle] = useState(null);
 
-  // Gestisce il caricamento iniziale.
+  // Conserva la fotografia mostrata nel riquadro principale.
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  // Conserva il file scelto dall'utente.
+  const [imageFile, setImageFile] = useState(null);
+
+  // Indica che il caricamento di una fotografia è in corso.
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Conserva un eventuale errore del caricamento.
+  const [uploadError, setUploadError] = useState("");
+
+  // Controlla l'apertura del pannello di gestione delle fotografie.
+  const [isImageManagerOpen, setIsImageManagerOpen] = useState(false);
+
+  // Conserva l'immagine che Laravel sta modificando.
+  const [updatingImageId, setUpdatingImageId] = useState(null);
+
+  // Conserva l'immagine che Laravel sta eliminando.
+  const [deletingImageId, setDeletingImageId] = useState(null);
+
+  // Conserva la fotografia attualmente in modifica.
+  const [editingImage, setEditingImage] = useState(null);
+
+  // Conserva la categoria selezionata nel modulo.
+  const [editCategory, setEditCategory] = useState("exterior");
+
+  // Conserva la descrizione inserita nel modulo.
+  const [editCaption, setEditCaption] = useState("");
+
+  // Indica che il salvataggio della modifica è in corso.
+  const [isSavingImage, setIsSavingImage] = useState(false);
+
+  // Conserva un eventuale errore delle operazioni sulla galleria.
+  const [imageActionError, setImageActionError] = useState("");
+
+  // Gestisce il caricamento iniziale della pagina.
   const [isLoading, setIsLoading] = useState(true);
 
-  // Conserva un eventuale errore della richiesta.
+  // Conserva un eventuale errore della richiesta principale.
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Invia una nuova fotografia al backend.
+  async function handleImageUpload(event) {
+    event.preventDefault();
+
+    // Conserva il form per poterlo svuotare dopo il caricamento.
+    const form = event.currentTarget;
+
+    if (!imageFile) {
+      setUploadError("Seleziona una fotografia da caricare.");
+
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError("");
+
+    /*
+     * FormData permette di inviare file tramite multipart/form-data.
+     * Il nome "image" deve corrispondere a quello validato da Laravel.
+     */
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    try {
+      const response = await api.post(
+        `/api/vehicles/${vehicleId}/images`,
+        formData,
+      );
+
+      const uploadedImage = response.data.data;
+
+      /*
+       * Aggiunge la fotografia alla copia locale del veicolo,
+       * senza dover eseguire immediatamente una seconda richiesta GET.
+       */
+      setVehicle((currentVehicle) => {
+        if (!currentVehicle) {
+          return currentVehicle;
+        }
+
+        const currentImages = currentVehicle.images ?? [];
+
+        return {
+          ...currentVehicle,
+          images: [...currentImages, uploadedImage],
+          images_count:
+            (currentVehicle.images_count ?? currentImages.length) + 1,
+          primary_image: uploadedImage.is_primary
+            ? uploadedImage
+            : currentVehicle.primary_image,
+        };
+      });
+
+      // Mostra immediatamente la fotografia appena caricata.
+      setSelectedImage(uploadedImage);
+
+      // Svuota il file selezionato e il campo del modulo.
+      setImageFile(null);
+      form.reset();
+    } catch (error) {
+      // Recupera l'eventuale messaggio di validazione inviato da Laravel.
+      const validationMessage = error.response?.data?.errors?.image?.[0];
+
+      setUploadError(
+        validationMessage || "Impossibile caricare la fotografia.",
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  // Imposta una fotografia come nuova copertina del veicolo.
+  async function handleSetPrimary(image) {
+    // Evita una richiesta inutile se è già la copertina.
+    if (image.is_primary) {
+      return;
+    }
+
+    setUpdatingImageId(image.id);
+    setImageActionError("");
+
+    try {
+      const response = await api.patch(`/api/vehicle-images/${image.id}`, {
+        is_primary: true,
+      });
+
+      const updatedImage = response.data.data;
+
+      /*
+       * La fotografia selezionata diventa principale.
+       * Tutte le altre fotografie perdono lo stato di copertina.
+       */
+      setVehicle((currentVehicle) => {
+        if (!currentVehicle) {
+          return currentVehicle;
+        }
+
+        const updatedImages = (currentVehicle.images ?? []).map(
+          (currentImage) => {
+            if (currentImage.id === updatedImage.id) {
+              return updatedImage;
+            }
+
+            return {
+              ...currentImage,
+              is_primary: false,
+            };
+          },
+        );
+
+        return {
+          ...currentVehicle,
+          images: updatedImages,
+          primary_image: updatedImage,
+        };
+      });
+
+      // Mostra immediatamente la nuova copertina.
+      setSelectedImage(updatedImage);
+    } catch (error) {
+      const validationMessage = error.response?.data?.errors?.is_primary?.[0];
+
+      setImageActionError(
+        validationMessage ||
+          "Impossibile impostare la fotografia come copertina.",
+      );
+    } finally {
+      setUpdatingImageId(null);
+    }
+  }
+
+  // Apre il modulo utilizzando i dati attuali della fotografia.
+  function handleStartImageEdit(image) {
+    setEditingImage(image);
+    setEditCategory(image.category);
+    setEditCaption(image.caption ?? "");
+    setImageActionError("");
+  }
+
+  // Invia a Laravel la nuova categoria e la nuova descrizione.
+  async function handleImageUpdate(event) {
+    event.preventDefault();
+
+    if (!editingImage) {
+      return;
+    }
+
+    setIsSavingImage(true);
+    setImageActionError("");
+
+    try {
+      const response = await api.patch(
+        `/api/vehicle-images/${editingImage.id}`,
+        {
+          category: editCategory,
+          caption: editCaption,
+        },
+      );
+
+      const updatedImage = response.data.data;
+
+      // Sostituisce la fotografia modificata nella galleria locale.
+      setVehicle((currentVehicle) => {
+        if (!currentVehicle) {
+          return currentVehicle;
+        }
+
+        const updatedImages = (currentVehicle.images ?? []).map(
+          (currentImage) =>
+            currentImage.id === updatedImage.id ? updatedImage : currentImage,
+        );
+
+        return {
+          ...currentVehicle,
+          images: updatedImages,
+          primary_image:
+            currentVehicle.primary_image?.id === updatedImage.id
+              ? updatedImage
+              : currentVehicle.primary_image,
+        };
+      });
+
+      // Aggiorna anche la fotografia grande, se è quella modificata.
+      setSelectedImage((currentSelectedImage) =>
+        currentSelectedImage?.id === updatedImage.id
+          ? updatedImage
+          : currentSelectedImage,
+      );
+
+      // Chiude il modulo dopo il salvataggio.
+      setEditingImage(null);
+    } catch (error) {
+      const validationErrors = error.response?.data?.errors;
+
+      setImageActionError(
+        validationErrors?.category?.[0] ||
+          validationErrors?.caption?.[0] ||
+          error.response?.data?.message ||
+          "Impossibile modificare la fotografia.",
+      );
+    } finally {
+      setIsSavingImage(false);
+    }
+  }
+
+  // Elimina una fotografia dopo aver chiesto conferma all'utente.
+  async function handleDeleteImage(image) {
+    const isConfirmed = window.confirm(
+      "Vuoi eliminare definitivamente questa fotografia?",
+    );
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    setDeletingImageId(image.id);
+    setImageActionError("");
+
+    try {
+      await api.delete(`/api/vehicle-images/${image.id}`);
+
+      // Chiude il modulo se era aperto sulla fotografia eliminata.
+      if (editingImage?.id === image.id) {
+        setEditingImage(null);
+      }
+
+      // Rimuove dalla galleria locale la fotografia eliminata.
+      let updatedImages = (vehicle.images ?? []).filter(
+        (currentImage) => currentImage.id !== image.id,
+      );
+
+      /*
+       * Se è stata eliminata la copertina, individua la prima
+       * fotografia rimasta seguendo lo stesso ordine del backend.
+       */
+      if (image.is_primary && updatedImages.length > 0) {
+        const nextPrimary = [...updatedImages].sort(
+          (firstImage, secondImage) =>
+            Number(firstImage.sort_order) - Number(secondImage.sort_order) ||
+            firstImage.id - secondImage.id,
+        )[0];
+
+        updatedImages = updatedImages.map((currentImage) => ({
+          ...currentImage,
+          is_primary: currentImage.id === nextPrimary.id,
+        }));
+      }
+
+      const primaryImage =
+        updatedImages.find((currentImage) => currentImage.is_primary) ?? null;
+
+      // Aggiorna il veicolo senza eseguire una nuova richiesta GET.
+      setVehicle((currentVehicle) => {
+        if (!currentVehicle) {
+          return currentVehicle;
+        }
+
+        return {
+          ...currentVehicle,
+          images: updatedImages,
+          images_count: updatedImages.length,
+          primary_image: primaryImage,
+        };
+      });
+
+      /*
+       * Se era visualizzata la fotografia eliminata, mostra la nuova
+       * copertina oppure la prima fotografia ancora disponibile.
+       */
+      setSelectedImage((currentSelectedImage) => {
+        if (!currentSelectedImage) {
+          return primaryImage ?? updatedImages[0] ?? null;
+        }
+
+        if (currentSelectedImage.id === image.id) {
+          return primaryImage ?? updatedImages[0] ?? null;
+        }
+
+        return (
+          updatedImages.find(
+            (currentImage) => currentImage.id === currentSelectedImage.id,
+          ) ??
+          primaryImage ??
+          null
+        );
+      });
+    } catch (error) {
+      setImageActionError(
+        error.response?.data?.message || "Impossibile eliminare la fotografia.",
+      );
+    } finally {
+      setDeletingImageId(null);
+    }
+  }
+
   useEffect(() => {
-    // Permette di annullare la richiesta lasciando la pagina.
+    // Permette di annullare la richiesta quando si lascia la pagina.
     const controller = new AbortController();
 
     async function loadVehicle() {
       setIsLoading(true);
       setErrorMessage("");
       setVehicle(null);
+      setSelectedImage(null);
 
       try {
         /*
@@ -46,8 +387,16 @@ function VehicleDetailsPage() {
         });
 
         // Laravel inserisce il veicolo nella proprietà data.
-        setVehicle(response.data.data);
+        const loadedVehicle = response.data.data;
+
+        setVehicle(loadedVehicle);
+
+        // Mostra la copertina oppure la prima fotografia disponibile.
+        setSelectedImage(
+          loadedVehicle.primary_image ?? loadedVehicle.images?.[0] ?? null,
+        );
       } catch (error) {
+        // Non mostra errori quando la richiesta è stata annullata.
         if (error.code !== "ERR_CANCELED") {
           if (error.response?.status === 404) {
             setErrorMessage("Il veicolo richiesto non esiste.");
@@ -66,6 +415,7 @@ function VehicleDetailsPage() {
 
     loadVehicle();
 
+    // Annulla la richiesta quando il componente viene smontato.
     return () => controller.abort();
   }, [vehicleId]);
 
@@ -97,11 +447,15 @@ function VehicleDetailsPage() {
 
   return (
     <>
-      <Link to="/vehicles" className="btn btn-link px-0 mb-3">
+      <Link
+        to="/vehicles"
+        className="btn btn-link text-secondary text-decoration-none px-0 mb-3"
+      >
         <i className="bi bi-arrow-left me-2" aria-hidden="true"></i>
         Torna ai veicoli
       </Link>
 
+      {/* Intestazione del veicolo. */}
       <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
         <div>
           <h1 className="mb-1">
@@ -124,12 +478,13 @@ function VehicleDetailsPage() {
         </span>
       </div>
 
-      <div className="card border-0 shadow-sm overflow-hidden mb-4">
-        {vehicle.primary_image ? (
+      {/* Fotografia principale oppure segnaposto. */}
+      <div className="card border-0 shadow-sm overflow-hidden mb-2 vehicle-detail-media">
+        {selectedImage ? (
           <img
-            src={vehicle.primary_image.url}
+            src={selectedImage.url}
             alt={
-              vehicle.primary_image.caption ||
+              selectedImage.caption ||
               `Foto di ${vehicle.brand} ${vehicle.model}`
             }
             className="vehicle-detail-image"
@@ -143,6 +498,372 @@ function VehicleDetailsPage() {
         )}
       </div>
 
+      {/* Mostra le informazioni della fotografia selezionata. */}
+      {selectedImage && (
+        <div className="vehicle-detail-caption d-flex flex-wrap align-items-center gap-2 mb-4">
+          <span className="badge text-bg-light border text-secondary">
+            {IMAGE_CATEGORY_LABELS[selectedImage.category] ??
+              selectedImage.category}
+          </span>
+
+          <span className="text-secondary">
+            {selectedImage.caption || "Nessuna descrizione"}
+          </span>
+        </div>
+      )}
+
+      {/* Galleria e pannello di gestione delle fotografie. */}
+      <section className="mb-4" aria-labelledby="vehicle-gallery-title">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+          <div>
+            <h2 id="vehicle-gallery-title" className="h5 mb-1">
+              Galleria fotografica
+            </h2>
+
+            <span className="small text-secondary">
+              {vehicle.images?.length ?? 0}{" "}
+              {(vehicle.images?.length ?? 0) === 1
+                ? "fotografia"
+                : "fotografie"}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => {
+              setIsImageManagerOpen((isOpen) => !isOpen);
+            }}
+            aria-expanded={isImageManagerOpen}
+            aria-controls="vehicle-image-manager"
+          >
+            <i
+              className={`bi ${
+                isImageManagerOpen ? "bi-x-lg" : "bi-images"
+              } me-2`}
+              aria-hidden="true"
+            ></i>
+
+            {isImageManagerOpen ? "Chiudi gestione" : "Gestisci fotografie"}
+          </button>
+        </div>
+
+        {/* Il modulo compare solamente quando si apre la gestione. */}
+        {isImageManagerOpen && (
+          <form
+            id="vehicle-image-manager"
+            className="card border-0 shadow-sm mb-4"
+            onSubmit={handleImageUpload}
+          >
+            <div className="card-body">
+              <h3 className="h6 mb-3">Aggiungi una fotografia</h3>
+
+              <div className="row g-3 align-items-end">
+                <div className="col-12 col-md">
+                  <label htmlFor="vehicle-image" className="form-label">
+                    Scegli un file
+                  </label>
+
+                  <input
+                    id="vehicle-image"
+                    type="file"
+                    className="form-control"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={isUploading}
+                    onChange={(event) => {
+                      setImageFile(event.target.files?.[0] ?? null);
+                      setUploadError("");
+                    }}
+                  />
+
+                  <div className="form-text">
+                    Formati accettati: JPG, PNG e WebP. Massimo 10 MB.
+                  </div>
+                </div>
+
+                <div className="col-12 col-md-auto d-grid">
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={!imageFile || isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          aria-hidden="true"
+                        ></span>
+                        Caricamento...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-upload me-2" aria-hidden="true"></i>
+                        Carica foto
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {uploadError && (
+                <div className="alert alert-danger mt-3 mb-0" role="alert">
+                  {uploadError}
+                </div>
+              )}
+            </div>
+          </form>
+        )}
+
+        {isImageManagerOpen && imageActionError && (
+          <div className="alert alert-danger" role="alert">
+            {imageActionError}
+          </div>
+        )}
+
+        {/* Mostra le miniature oppure un messaggio se la galleria è vuota. */}
+        {vehicle.images?.length > 0 ? (
+          <div className="d-flex flex-wrap align-items-start gap-3">
+            {vehicle.images.map((image) => (
+              <div key={image.id} className="vehicle-gallery-item">
+                <button
+                  type="button"
+                  className={`vehicle-gallery-thumbnail ${
+                    selectedImage?.id === image.id
+                      ? "vehicle-gallery-thumbnail--active"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedImage(image);
+                  }}
+                  aria-pressed={selectedImage?.id === image.id}
+                  aria-label={
+                    image.caption ||
+                    `Mostra la fotografia ${image.original_name}`
+                  }
+                >
+                  <img src={image.url} alt="" loading="lazy" />
+                </button>
+
+                {/* I comandi compaiono solamente aprendo la gestione. */}
+                {isImageManagerOpen && (
+                  <div className="d-grid gap-2 mt-2">
+                    {image.is_primary ? (
+                      <span className="badge text-bg-secondary w-100 py-2">
+                        <i
+                          className="bi bi-star-fill me-1"
+                          aria-hidden="true"
+                        ></i>
+                        Copertina
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-light border w-100"
+                        disabled={
+                          updatingImageId !== null || deletingImageId !== null
+                        }
+                        onClick={() => {
+                          handleSetPrimary(image);
+                        }}
+                      >
+                        {updatingImageId === image.id ? (
+                          <>
+                            <span
+                              className="spinner-border spinner-border-sm me-1"
+                              aria-hidden="true"
+                            ></span>
+                            Attendi
+                          </>
+                        ) : (
+                          <>
+                            <i
+                              className="bi bi-star me-1"
+                              aria-hidden="true"
+                            ></i>
+                            Copertina
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className={`btn btn-sm w-100 ${
+                        editingImage?.id === image.id
+                          ? "btn-secondary"
+                          : "btn-outline-secondary"
+                      }`}
+                      disabled={
+                        deletingImageId !== null ||
+                        updatingImageId !== null ||
+                        isSavingImage
+                      }
+                      onClick={() => {
+                        handleStartImageEdit(image);
+                      }}
+                    >
+                      <i className="bi bi-pencil me-1" aria-hidden="true"></i>
+                      {editingImage?.id === image.id
+                        ? "In modifica"
+                        : "Modifica"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger w-100"
+                      disabled={
+                        deletingImageId !== null || updatingImageId !== null
+                      }
+                      onClick={() => {
+                        handleDeleteImage(image);
+                      }}
+                    >
+                      {deletingImageId === image.id ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm me-1"
+                            aria-hidden="true"
+                          ></span>
+                          Elimina
+                        </>
+                      ) : (
+                        <>
+                          <i
+                            className="bi bi-trash me-1"
+                            aria-hidden="true"
+                          ></i>
+                          Elimina
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-secondary mb-0">
+            Non sono ancora state caricate fotografie.
+          </p>
+        )}
+
+        {isImageManagerOpen && editingImage && (
+          <form
+            className="card border-0 shadow-sm mt-4"
+            onSubmit={handleImageUpdate}
+          >
+            <div className="card-body">
+              <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                  <h3 className="h6 mb-1">Modifica fotografia</h3>
+
+                  <p className="small text-secondary mb-0">
+                    {editingImage.original_name}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Chiudi modifica"
+                  disabled={isSavingImage}
+                  onClick={() => {
+                    setEditingImage(null);
+                    setImageActionError("");
+                  }}
+                ></button>
+              </div>
+
+              <div className="row g-3">
+                <div className="col-12 col-md-4">
+                  <label
+                    htmlFor="vehicle-image-category"
+                    className="form-label"
+                  >
+                    Categoria
+                  </label>
+
+                  <select
+                    id="vehicle-image-category"
+                    className="form-select"
+                    value={editCategory}
+                    disabled={isSavingImage}
+                    onChange={(event) => {
+                      setEditCategory(event.target.value);
+                    }}
+                  >
+                    {Object.entries(IMAGE_CATEGORY_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+
+                <div className="col-12 col-md-8">
+                  <label htmlFor="vehicle-image-caption" className="form-label">
+                    Descrizione
+                  </label>
+
+                  <input
+                    id="vehicle-image-caption"
+                    type="text"
+                    className="form-control"
+                    value={editCaption}
+                    maxLength={255}
+                    disabled={isSavingImage}
+                    placeholder="Esempio: vista anteriore del veicolo"
+                    onChange={(event) => {
+                      setEditCaption(event.target.value);
+                    }}
+                  />
+
+                  <div className="form-text">Massimo 255 caratteri.</div>
+                </div>
+              </div>
+
+              <div className="d-flex flex-wrap justify-content-end gap-2 mt-4">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  disabled={isSavingImage}
+                  onClick={() => {
+                    setEditingImage(null);
+                    setImageActionError("");
+                  }}
+                >
+                  Annulla
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isSavingImage}
+                >
+                  {isSavingImage ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        aria-hidden="true"
+                      ></span>
+                      Salvataggio...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-lg me-2" aria-hidden="true"></i>
+                      Salva modifiche
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </section>
+
+      {/* Informazioni principali del veicolo. */}
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-body p-4">
           <h2 className="h4 mb-4">Dati del veicolo</h2>
@@ -208,6 +929,7 @@ function VehicleDetailsPage() {
         </div>
       </div>
 
+      {/* Riepilogo dei dati collegati al veicolo. */}
       <div className="row g-3 mb-4">
         <div className="col-12 col-md-4">
           <div className="card border-0 shadow-sm h-100">

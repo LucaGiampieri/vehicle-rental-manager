@@ -1,12 +1,12 @@
-/* Base minima: il resto dell'interfaccia usa Bootstrap e gli stili qui sotto. */
+/* Base minima: il resto dell'interfaccia usa Bootstrap. */
 body {
   min-width: 320px;
   margin: 0;
 }
 
-/* Dimensioni immagini e placeholder veicoli  */
-
-/* VehiclesPage */
+/* ==================================================
+   VehiclesPage
+   ================================================== */
 
 /* Dimensioni condivise dalla foto e dal segnaposto dei veicoli. */
 .vehicle-thumbnail {
@@ -27,42 +27,121 @@ img.vehicle-thumbnail {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e9ecef;
   color: #6c757d;
   font-size: 1.5rem;
+  background-color: #e9ecef;
 }
 
-/* VehicleDetailsPage */
+/* ==================================================
+   VehicleDetailsPage: fotografia principale
+   ================================================== */
 
-/* Fotografia principale mostrata nella pagina di dettaglio. */
-.vehicle-detail-image {
+/*
+ * Il riquadro mantiene sempre la stessa dimensione,
+ * indipendentemente dalle dimensioni originali della fotografia.
+ */
+.vehicle-detail-media {
   width: 100%;
-  height: clamp(240px, 42vw, 440px);
+  max-width: 780px;
+  height: 520px;
+  margin-right: auto;
+  margin-left: auto;
+  background-color: #f1f3f5;
 }
 
-/* Mantiene le proporzioni della foto e ritaglia l'eccesso. */
+/*
+ * La fotografia riempie completamente il riquadro.
+ * Cover mantiene le proporzioni e ritaglia solamente l'eccesso.
+ */
 img.vehicle-detail-image {
   display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Segnaposto con le stesse dimensioni delle fotografie. */
+.vehicle-detail-image--placeholder {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.75rem;
+  color: #6c757d;
+  background-color: #f1f3f5;
+}
+
+/* Ingrandisce l'icona del segnaposto. */
+.vehicle-detail-image--placeholder i {
+  font-size: 3rem;
+}
+
+/*
+ * Allinea categoria e descrizione alla larghezza
+ * della fotografia principale.
+ */
+.vehicle-detail-caption {
+  width: 100%;
+  max-width: 780px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* ==================================================
+   VehicleDetailsPage: galleria
+   ================================================== */
+
+/* Mantiene allineati la miniatura e i suoi comandi. */
+.vehicle-gallery-item {
+  width: 112px;
+}
+
+/* Pulsante che contiene ogni miniatura della galleria. */
+.vehicle-gallery-thumbnail {
+  width: 112px;
+  height: 76px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  background-color: #e9ecef;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* Tutte le miniature mantengono la stessa dimensione. */
+.vehicle-gallery-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-/* Segnaposto utilizzato quando il veicolo non possiede fotografie. */
-.vehicle-detail-image--placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  background-color: #e9ecef;
-  color: #6c757d;
+/* Evidenzia la miniatura al passaggio del mouse o da tastiera. */
+.vehicle-gallery-thumbnail:hover,
+.vehicle-gallery-thumbnail:focus-visible {
+  border-color: #6ea8fe;
+  box-shadow: 0 0 0 0.2rem rgb(13 110 253 / 15%);
+  transform: translateY(-2px);
 }
 
-.vehicle-detail-image--placeholder i {
-  font-size: 4rem;
+/* Indica quale fotografia è mostrata nel riquadro principale. */
+.vehicle-gallery-thumbnail--active {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgb(13 110 253 / 20%);
 }
+
+/* ==================================================
+   Loader
+   ================================================== */
 
 /* Loader condiviso durante la verifica iniziale della sessione. */
-
 .app-loader {
   min-height: 50vh;
   display: flex;
@@ -83,13 +162,21 @@ img.vehicle-detail-image {
   from {
     transform: translateY(4px);
   }
+
   to {
     transform: translateY(-8px);
   }
 }
 
+/* Su smartphone il riquadro rimane uniforme, ma più basso. */
+@media (max-width: 767.98px) {
+  .vehicle-detail-media {
+    height: 320px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  /* Chi riduce le animazioni nel sistema vede comunque il messaggio di stato. */
+  /* Chi riduce le animazioni vede comunque il messaggio di stato. */
   .app-loader__car {
     animation: none;
   }

@@ -230,7 +230,7 @@ class VehicleImageApiTest extends TestCase
                 [
                     'image' => UploadedFile::fake()
                         ->image('large.jpg')
-                        ->size(5121),
+                        ->size(10241),
                 ]
             );
 
