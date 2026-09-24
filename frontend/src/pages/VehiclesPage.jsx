@@ -265,6 +265,7 @@ function VehiclesPage() {
             <table className="table table-striped align-middle">
               <thead>
                 <tr>
+                  <th scope="col">Foto</th>
                   <th scope="col">Targa</th>
                   <th scope="col">Veicolo</th>
                   <th scope="col">Tipo</th>
@@ -276,6 +277,26 @@ function VehiclesPage() {
               <tbody>
                 {vehicles.map((vehicle) => (
                   <tr key={vehicle.id}>
+                    <td>
+                      {vehicle.primary_image ? (
+                        <img
+                          src={vehicle.primary_image.url}
+                          alt={
+                            vehicle.primary_image.caption ||
+                            `Foto di ${vehicle.brand} ${vehicle.model}`
+                          }
+                          className="vehicle-thumbnail"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div
+                          className="vehicle-thumbnail vehicle-thumbnail--placeholder"
+                          aria-label="Fotografia non disponibile"
+                        >
+                          <i className="bi bi-car-front" aria-hidden="true"></i>
+                        </div>
+                      )}
+                    </td>
                     <td className="fw-semibold">{vehicle.license_plate}</td>
 
                     <td>

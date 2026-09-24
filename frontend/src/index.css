@@ -4,6 +4,32 @@ body {
   margin: 0;
 }
 
+/* Dimensioni immagini e placeholder veicoli  */
+
+/* Dimensioni condivise dalla foto e dal segnaposto dei veicoli. */
+.vehicle-thumbnail {
+  width: 72px;
+  height: 48px;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+}
+
+/* Ritaglia la fotografia senza deformarla. */
+img.vehicle-thumbnail {
+  display: block;
+  object-fit: cover;
+}
+
+/* Mostra un'icona quando il veicolo non possiede una copertina. */
+.vehicle-thumbnail--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e9ecef;
+  color: #6c757d;
+  font-size: 1.5rem;
+}
+
 /* Loader condiviso durante la verifica iniziale della sessione. */
 
 .app-loader {
