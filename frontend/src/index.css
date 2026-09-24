@@ -6,6 +6,8 @@ body {
 
 /* Dimensioni immagini e placeholder veicoli  */
 
+/* VehiclesPage */
+
 /* Dimensioni condivise dalla foto e dal segnaposto dei veicoli. */
 .vehicle-thumbnail {
   width: 72px;
@@ -28,6 +30,35 @@ img.vehicle-thumbnail {
   background-color: #e9ecef;
   color: #6c757d;
   font-size: 1.5rem;
+}
+
+/* VehicleDetailsPage */
+
+/* Fotografia principale mostrata nella pagina di dettaglio. */
+.vehicle-detail-image {
+  width: 100%;
+  height: clamp(240px, 42vw, 440px);
+}
+
+/* Mantiene le proporzioni della foto e ritaglia l'eccesso. */
+img.vehicle-detail-image {
+  display: block;
+  object-fit: cover;
+}
+
+/* Segnaposto utilizzato quando il veicolo non possiede fotografie. */
+.vehicle-detail-image--placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background-color: #e9ecef;
+  color: #6c757d;
+}
+
+.vehicle-detail-image--placeholder i {
+  font-size: 4rem;
 }
 
 /* Loader condiviso durante la verifica iniziale della sessione. */

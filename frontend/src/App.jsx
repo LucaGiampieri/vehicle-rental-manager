@@ -4,6 +4,7 @@ import RequireAuth from "./components/RequireAuth";
 import DefaultLayout from "./layouts/DefaultLayout";
 import DashboardPage from "./pages/DashboardPage";
 import VehiclesPage from "./pages/VehiclesPage";
+import VehicleDetailsPage from "./pages/VehicleDetailsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import LoginPage from "./pages/LoginPage";
 
@@ -21,6 +22,10 @@ function App() {
             <Route element={<DefaultLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="vehicles" element={<VehiclesPage />} />
+              <Route
+                path="vehicles/:vehicleId/:vehicleSlug?"
+                element={<VehicleDetailsPage />}
+              />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Route>

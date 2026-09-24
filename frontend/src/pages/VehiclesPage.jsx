@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Loader from "../components/Loader";
+import createSlug from "../utils/createSlug";
 import api from "../services/api";
 
 // Associa i valori tecnici del backend alle etichette italiane.
@@ -271,6 +273,9 @@ function VehiclesPage() {
                   <th scope="col">Tipo</th>
                   <th scope="col">Chilometri</th>
                   <th scope="col">Stato</th>
+                  <th scope="col" className="text-end">
+                    Azioni
+                  </th>
                 </tr>
               </thead>
 
@@ -319,6 +324,18 @@ function VehiclesPage() {
                       >
                         {vehicle.is_active ? "Attivo" : "Disattivato"}
                       </span>
+                    </td>
+                    <td className="text-end">
+                      <Link
+                        to={`/vehicles/${vehicle.id}/${createSlug(
+                          [vehicle.brand, vehicle.model].join(" "),
+                        )}`}
+                        className="btn btn-sm btn-outline-primary"
+                        aria-label={`Visualizza ${vehicle.brand} ${vehicle.model}`}
+                      >
+                        <i className="bi bi-eye me-2" aria-hidden="true"></i>
+                        Dettagli
+                      </Link>
                     </td>
                   </tr>
                 ))}
