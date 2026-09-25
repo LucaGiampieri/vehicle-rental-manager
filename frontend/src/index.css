@@ -1,7 +1,245 @@
-/* Base minima: il resto dell'interfaccia usa Bootstrap. */
+/* ==================================================
+   Identità grafica dell'applicazione
+   ================================================== */
+
+:root {
+  --app-background: #f3f5f4;
+  --app-surface: #ffffff;
+  --app-surface-soft: #e9eeec;
+  --app-text: #202a27;
+  --app-text-muted: #687570;
+  --app-border: #d9e0dd;
+  --app-primary: #356859;
+  --app-primary-dark: #294f45;
+  --app-primary-soft: #dce9e4;
+  --app-navbar: #202c29;
+  --app-navbar-border: #34413d;
+  --app-danger: #b54747;
+  --app-shadow: 0 12px 35px rgb(31 42 39 / 8%);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   min-width: 320px;
   margin: 0;
+  color: var(--app-text);
+  background-color: var(--app-background);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-main {
+  padding-top: 2.5rem;
+  padding-bottom: 3rem;
+}
+
+/* ==================================================
+   Navbar principale
+   ================================================== */
+
+.app-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  color: #ffffff;
+  background-color: var(--app-navbar);
+  border-bottom: 1px solid var(--app-navbar-border);
+  box-shadow: 0 8px 24px rgb(20 29 27 / 14%);
+}
+
+.app-navbar__inner {
+  min-height: 76px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+/* Marchio e icona del gestionale. */
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.app-brand:hover {
+  color: #ffffff;
+}
+
+.app-brand__icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  font-size: 1.25rem;
+  background-color: var(--app-primary);
+  border-radius: 0.8rem;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+}
+
+.app-brand__content {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.app-brand__name {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.app-brand__subtitle {
+  margin-top: 0.2rem;
+  color: #aebbb7;
+  font-size: 0.75rem;
+}
+
+/* Collegamenti principali. */
+.app-navigation {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.app-navigation__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  color: #bdc8c4;
+  font-size: 0.925rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0.65rem;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.app-navigation__link:hover {
+  color: #ffffff;
+  background-color: rgb(255 255 255 / 7%);
+}
+
+.app-navigation__link--active {
+  color: #ffffff;
+  background-color: var(--app-primary);
+}
+
+/* Utente autenticato. */
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.app-user__avatar {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-navbar);
+  font-weight: 700;
+  background-color: #d9e6e1;
+  border-radius: 50%;
+}
+
+.app-user__information {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.app-user__name {
+  max-width: 150px;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-user__role {
+  margin-top: 0.2rem;
+  color: #aebbb7;
+  font-size: 0.72rem;
+}
+
+.app-logout-button {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #dbe3e0;
+  background-color: transparent;
+  border: 1px solid #56625e;
+  border-radius: 0.65rem;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.app-logout-button:hover:not(:disabled) {
+  color: #ffffff;
+  background-color: rgb(255 255 255 / 8%);
+  border-color: #7c8884;
+}
+
+.app-logout-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+/* Adattamento della navbar per smartphone. */
+@media (max-width: 767.98px) {
+  .app-navbar__inner {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    gap: 0.9rem;
+  }
+
+  .app-navigation {
+    width: 100%;
+    order: 3;
+  }
+
+  .app-navigation__link {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .app-user__information {
+    display: none;
+  }
+
+  .app-main {
+    padding-top: 1.5rem;
+  }
 }
 
 /* ==================================================
@@ -179,5 +417,1207 @@ img.vehicle-detail-image {
   /* Chi riduce le animazioni vede comunque il messaggio di stato. */
   .app-loader__car {
     animation: none;
+  }
+}
+
+/* ==================================================
+   Elementi condivisi dell'interfaccia
+   ================================================== */
+
+/* Titoli più compatti e moderni. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--app-text);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+}
+
+/* Sostituisce il grigio standard di Bootstrap. */
+.text-secondary {
+  color: var(--app-text-muted) !important;
+}
+
+/* ==================================================
+   Schede
+   ================================================== */
+
+.card {
+  overflow: hidden;
+  background-color: var(--app-surface);
+  border-color: var(--app-border);
+  border-radius: 1rem;
+}
+
+.shadow-sm {
+  box-shadow: var(--app-shadow) !important;
+}
+
+.card-header,
+.card-footer {
+  background-color: var(--app-surface);
+  border-color: var(--app-border);
+}
+
+/* ==================================================
+   Pulsanti
+   ================================================== */
+
+.btn {
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  border-radius: 0.65rem;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn-sm {
+  padding: 0.42rem 0.7rem;
+  border-radius: 0.55rem;
+}
+
+/* Colore principale verde petrolio. */
+.btn-primary {
+  --bs-btn-color: #ffffff;
+  --bs-btn-bg: var(--app-primary);
+  --bs-btn-border-color: var(--app-primary);
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-bg: var(--app-primary-dark);
+  --bs-btn-hover-border-color: var(--app-primary-dark);
+  --bs-btn-focus-shadow-rgb: 53, 104, 89;
+  --bs-btn-active-color: #ffffff;
+  --bs-btn-active-bg: var(--app-primary-dark);
+  --bs-btn-active-border-color: var(--app-primary-dark);
+  --bs-btn-disabled-color: #ffffff;
+  --bs-btn-disabled-bg: #78978e;
+  --bs-btn-disabled-border-color: #78978e;
+}
+
+/* Variante solo bordo del colore principale. */
+.btn-outline-primary {
+  --bs-btn-color: var(--app-primary);
+  --bs-btn-border-color: #8eaaa1;
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-bg: var(--app-primary);
+  --bs-btn-hover-border-color: var(--app-primary);
+  --bs-btn-focus-shadow-rgb: 53, 104, 89;
+  --bs-btn-active-color: #ffffff;
+  --bs-btn-active-bg: var(--app-primary-dark);
+  --bs-btn-active-border-color: var(--app-primary-dark);
+}
+
+/* Variante grigia per le azioni secondarie. */
+.btn-outline-secondary {
+  --bs-btn-color: #53615c;
+  --bs-btn-border-color: #b8c2be;
+  --bs-btn-hover-color: var(--app-text);
+  --bs-btn-hover-bg: #e4e9e7;
+  --bs-btn-hover-border-color: #a8b4af;
+  --bs-btn-focus-shadow-rgb: 104, 117, 112;
+  --bs-btn-active-color: var(--app-text);
+  --bs-btn-active-bg: #d9e0dd;
+  --bs-btn-active-border-color: #9da9a4;
+}
+
+/* ==================================================
+   Moduli
+   ================================================== */
+
+.form-label {
+  margin-bottom: 0.45rem;
+  color: #36433f;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.form-control,
+.form-select,
+.input-group-text {
+  min-height: 44px;
+  border-color: var(--app-border);
+  border-radius: 0.65rem;
+}
+
+.form-control,
+.form-select {
+  color: var(--app-text);
+  background-color: #ffffff;
+}
+
+.form-control::placeholder {
+  color: #9aa49f;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #6f988c;
+  box-shadow: 0 0 0 0.2rem rgb(53 104 89 / 14%);
+}
+
+.input-group > .form-control,
+.input-group > .form-select {
+  border-radius: 0;
+}
+
+.input-group > :first-child {
+  border-top-left-radius: 0.65rem;
+  border-bottom-left-radius: 0.65rem;
+}
+
+.input-group > :last-child {
+  border-top-right-radius: 0.65rem;
+  border-bottom-right-radius: 0.65rem;
+}
+
+.input-group-text {
+  color: var(--app-text-muted);
+  background-color: #f7f8f8;
+}
+
+.form-check-input:checked {
+  background-color: var(--app-primary);
+  border-color: var(--app-primary);
+}
+
+.form-check-input:focus {
+  border-color: #6f988c;
+  box-shadow: 0 0 0 0.2rem rgb(53 104 89 / 14%);
+}
+
+.form-text {
+  color: var(--app-text-muted);
+}
+
+/* ==================================================
+   Tabelle
+   ================================================== */
+
+.table-responsive {
+  overflow: hidden;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  box-shadow: var(--app-shadow);
+}
+
+.table-responsive .table {
+  margin-bottom: 0;
+}
+
+.table {
+  --bs-table-color: var(--app-text);
+  --bs-table-bg: var(--app-surface);
+  --bs-table-striped-bg: #f7f9f8;
+  --bs-table-hover-bg: var(--app-primary-soft);
+  vertical-align: middle;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.9rem;
+  border-bottom-color: #e7ebe9;
+}
+
+.table thead th {
+  color: #53615c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  background-color: #edf1ef;
+  border-bottom-width: 1px;
+}
+
+.table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover > * {
+  background-color: var(--app-primary-soft);
+}
+
+/* ==================================================
+   Badge e messaggi
+   ================================================== */
+
+.badge {
+  padding: 0.45rem 0.65rem;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.text-bg-success {
+  color: #245344 !important;
+  background-color: #dcece6 !important;
+}
+
+.text-bg-secondary {
+  color: #4f5c57 !important;
+  background-color: #e3e8e6 !important;
+}
+
+.alert {
+  border-radius: 0.8rem;
+}
+
+/* Aggiorna il colore del loader. */
+.app-loader {
+  color: var(--app-primary);
+}
+
+/* Migliora la visibilità della selezione da tastiera. */
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid rgb(53 104 89 / 25%);
+  outline-offset: 2px;
+}
+
+/* ==================================================
+   Pagina di accesso
+   ================================================== */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  background:
+    radial-gradient(circle at 15% 20%, rgb(53 104 89 / 12%), transparent 34%),
+    radial-gradient(circle at 85% 80%, rgb(197 139 58 / 9%), transparent 30%),
+    var(--app-background);
+}
+
+.login-panel {
+  max-width: 1050px;
+  min-height: 620px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr);
+  margin: 0 auto;
+  overflow: hidden;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 1.5rem;
+  box-shadow: 0 28px 70px rgb(31 42 39 / 14%);
+}
+
+/* Presentazione laterale. */
+.login-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: clamp(2.5rem, 6vw, 5rem);
+  overflow: hidden;
+  color: #ffffff;
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 4%), transparent 55%),
+    var(--app-navbar);
+}
+
+.login-hero::after {
+  position: absolute;
+  right: -110px;
+  bottom: -120px;
+  width: 320px;
+  height: 320px;
+  content: "";
+  background-color: rgb(53 104 89 / 35%);
+  border-radius: 50%;
+}
+
+.login-hero__content {
+  position: relative;
+  z-index: 1;
+  max-width: 430px;
+}
+
+.login-hero__icon {
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  background-color: var(--app-primary);
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 20%);
+}
+
+.login-hero__eyebrow {
+  display: block;
+  margin-bottom: 0.9rem;
+  color: #aebbb7;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.login-hero__title {
+  margin-bottom: 1.25rem;
+  color: #ffffff;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.login-hero__description {
+  margin-bottom: 2rem;
+  color: #ccd5d2;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.login-benefits {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.login-benefits li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: #e2e8e6;
+  font-size: 0.9rem;
+}
+
+.login-benefits i {
+  color: #78a998;
+}
+
+/* Pannello contenente il modulo. */
+.login-form-panel {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  padding: clamp(2rem, 5vw, 4.5rem);
+}
+
+.login-form-panel__header {
+  margin-bottom: 2.25rem;
+}
+
+.login-form-panel__label {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  color: var(--app-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.login-form {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.login-password-button {
+  min-width: 46px;
+  color: var(--app-text-muted);
+  background-color: #f7f8f8;
+  border: 1px solid var(--app-border);
+  border-left: 0;
+  border-top-right-radius: 0.65rem;
+  border-bottom-right-radius: 0.65rem;
+}
+
+.login-password-button:hover:not(:disabled) {
+  color: var(--app-primary);
+  background-color: var(--app-primary-soft);
+}
+
+.login-password-button:disabled {
+  opacity: 0.65;
+}
+
+/* Su tablet e smartphone la presentazione passa sopra al modulo. */
+@media (max-width: 991.98px) {
+  .login-panel {
+    max-width: 680px;
+    grid-template-columns: 1fr;
+  }
+
+  .login-hero {
+    padding: 2.5rem;
+  }
+
+  .login-hero__title {
+    font-size: 2.4rem;
+  }
+
+  .login-benefits {
+    display: none;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .login-page {
+    align-items: flex-start;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .login-panel {
+    min-height: auto;
+    border-radius: 1rem;
+  }
+
+  .login-hero,
+  .login-form-panel {
+    padding: 1.5rem;
+  }
+
+  .login-hero__icon {
+    margin-bottom: 1.25rem;
+  }
+
+  .login-hero__title {
+    font-size: 2rem;
+  }
+}
+
+/* ==================================================
+   Dashboard
+   ================================================== */
+
+.dashboard-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(1.75rem, 4vw, 3rem);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  color: #ffffff;
+  background:
+    linear-gradient(120deg, transparent, rgb(53 104 89 / 22%)),
+    var(--app-navbar);
+  border-radius: 1.25rem;
+  box-shadow: 0 18px 45px rgb(31 42 39 / 14%);
+}
+
+.dashboard-hero::after {
+  position: absolute;
+  right: -70px;
+  bottom: -120px;
+  width: 280px;
+  height: 280px;
+  content: "";
+  background-color: rgb(255 255 255 / 4%);
+  border-radius: 50%;
+}
+
+.dashboard-hero__content,
+.dashboard-hero__actions {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-hero h1 {
+  margin-bottom: 0.75rem;
+  color: #ffffff;
+}
+
+.dashboard-hero p {
+  margin: 0;
+  color: #cbd4d1;
+}
+
+.dashboard-hero__eyebrow {
+  display: block;
+  margin-bottom: 0.65rem;
+  color: #8fb5a9;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.dashboard-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.dashboard-hero__primary-button {
+  color: var(--app-navbar);
+  background-color: #ffffff;
+  border-color: #ffffff;
+}
+
+.dashboard-hero__primary-button:hover {
+  color: var(--app-navbar);
+  background-color: #e8efec;
+  border-color: #e8efec;
+}
+
+.dashboard-hero__secondary-button {
+  color: #ffffff;
+  background-color: transparent;
+  border-color: #67736f;
+}
+
+.dashboard-hero__secondary-button:hover {
+  color: #ffffff;
+  background-color: rgb(255 255 255 / 8%);
+  border-color: #8b9692;
+}
+
+/* Schede numeriche principali. */
+.dashboard-metric-card {
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  box-shadow: var(--app-shadow);
+}
+
+.dashboard-metric-card__icon {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--app-primary);
+  font-size: 1.2rem;
+  background-color: var(--app-primary-soft);
+  border-radius: 0.8rem;
+}
+
+.dashboard-metric-card__icon--success {
+  color: #33705d;
+  background-color: #dcece6;
+}
+
+.dashboard-metric-card__icon--warm {
+  color: #8a6129;
+  background-color: #f3e8d5;
+}
+
+.dashboard-metric-card__icon--danger {
+  color: var(--app-danger);
+  background-color: #f4dddd;
+}
+
+.dashboard-metric-card__label {
+  margin-bottom: 0.2rem;
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.dashboard-metric-card__value {
+  color: var(--app-text);
+  font-size: 1.55rem;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+.dashboard-metric-card__supporting {
+  margin-top: 0.2rem;
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+}
+
+/* Pannelli secondari. */
+.dashboard-section-card {
+  height: 100%;
+  padding: 1.5rem;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  box-shadow: var(--app-shadow);
+}
+
+.dashboard-section-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-section-card__eyebrow {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--app-text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dashboard-section-icon {
+  color: var(--app-primary);
+  font-size: 1.5rem;
+}
+
+.dashboard-percentage {
+  color: var(--app-primary);
+  font-size: 1.3rem;
+  font-weight: 750;
+}
+
+/* Barre percentuali. */
+.dashboard-progress {
+  height: 9px;
+  overflow: hidden;
+  background-color: #e6ebe9;
+  border-radius: 999px;
+}
+
+.dashboard-progress__bar {
+  height: 100%;
+  display: block;
+  background-color: var(--app-primary);
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.dashboard-progress__bar--warm {
+  background-color: #c58b3a;
+}
+
+/* Piccoli riepiloghi sotto le barre. */
+.dashboard-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.dashboard-summary-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dashboard-summary-grid span {
+  color: var(--app-text-muted);
+  font-size: 0.73rem;
+}
+
+.dashboard-summary-grid strong {
+  color: var(--app-text);
+  font-size: 1.1rem;
+}
+
+/* Elenco finanziario. */
+.dashboard-financial-list {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.dashboard-financial-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #e8ecea;
+}
+
+.dashboard-financial-list > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.dashboard-financial-list span {
+  color: var(--app-text-muted);
+}
+
+.dashboard-financial-list strong {
+  font-size: 1rem;
+}
+
+/* Riepilogo scadenze. */
+.dashboard-deadlines {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.dashboard-deadlines__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  color: #765725;
+  background-color: #f6eddc;
+  border-radius: 0.8rem;
+}
+
+.dashboard-deadlines__item span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+}
+
+.dashboard-deadlines__item strong {
+  font-size: 1.15rem;
+}
+
+.dashboard-deadlines__item--danger {
+  color: #8b3939;
+  background-color: #f4dddd;
+}
+
+/* Errore centrale della dashboard. */
+.dashboard-error {
+  max-width: 520px;
+  padding: 3rem;
+  margin: 4rem auto;
+  text-align: center;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  box-shadow: var(--app-shadow);
+}
+
+.dashboard-error > i {
+  display: block;
+  margin-bottom: 1rem;
+  color: var(--app-danger);
+  font-size: 2.5rem;
+}
+
+@media (max-width: 767.98px) {
+  .dashboard-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-hero__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .dashboard-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==================================================
+   Pagina veicoli
+   ================================================== */
+
+/* Etichetta superiore condivisa dalle sezioni. */
+.page-eyebrow {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--app-primary);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Intestazione principale della pagina. */
+.vehicles-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 0.5rem 0;
+  margin-bottom: 2rem;
+}
+
+.vehicles-page-header p {
+  max-width: 650px;
+}
+
+/* Intestazione interna della scheda dei filtri. */
+.vehicles-filter-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.vehicles-filter-card__icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--app-primary);
+  font-size: 1.1rem;
+  background-color: var(--app-primary-soft);
+  border-radius: 0.75rem;
+}
+
+/* Su smartphone titolo e pulsante vengono impilati. */
+@media (max-width: 575.98px) {
+  .vehicles-page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .vehicles-page-header .btn {
+    width: 100%;
+  }
+
+  .vehicles-filter-card__header {
+    align-items: center;
+  }
+}
+
+/* ==================================================
+   Elenco responsive dei veicoli
+   ================================================== */
+
+.vehicles-list-section {
+  overflow: hidden;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  box-shadow: var(--app-shadow);
+}
+
+.vehicles-list-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.vehicles-list-section__total {
+  padding: 0.55rem 0.8rem;
+  color: var(--app-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background-color: var(--app-primary-soft);
+  border-radius: 999px;
+}
+
+/*
+ * La tabella si trova già dentro una sezione completa,
+ * quindi rimuoviamo il secondo bordo esterno.
+ */
+.vehicles-table-wrapper {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.vehicle-table__name {
+  font-weight: 650;
+}
+
+.vehicles-pagination {
+  padding: 1.5rem;
+  border-top: 1px solid var(--app-border);
+}
+
+/* Trasforma ogni riga in una scheda su smartphone. */
+@media (max-width: 767.98px) {
+  .vehicles-list-section__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .vehicles-list-section__total {
+    white-space: normal;
+  }
+
+  .vehicles-table-wrapper {
+    padding: 1rem;
+    overflow: visible;
+    background-color: #f4f7f5;
+  }
+
+  .vehicles-table,
+  .vehicles-table tbody,
+  .vehicles-table tr,
+  .vehicles-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /*
+   * Nasconde visivamente l'intestazione perché ogni cella
+   * utilizza la propria etichetta tramite data-label.
+   */
+  .vehicles-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .vehicles-table tbody {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .vehicles-table tbody tr {
+    padding: 1rem;
+    background-color: #ffffff;
+    border: 1px solid var(--app-border);
+    border-radius: 0.9rem;
+    box-shadow: 0 8px 24px rgb(31 42 39 / 6%);
+  }
+
+  .vehicles-table tbody tr:hover > * {
+    background-color: transparent;
+  }
+
+  .vehicles-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0 !important;
+    background-color: transparent !important;
+    border: 0;
+    text-align: right;
+  }
+
+  .vehicles-table td[data-label]::before {
+    color: var(--app-text-muted);
+    font-size: 0.75rem;
+    font-weight: 650;
+    content: attr(data-label);
+  }
+
+  .vehicles-table .vehicle-table__photo {
+    justify-content: flex-start;
+    padding-bottom: 1rem !important;
+    margin-bottom: 0.4rem;
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .vehicle-table__photo .vehicle-thumbnail {
+    width: 96px;
+    height: 64px;
+  }
+
+  .vehicles-table .vehicle-table__actions {
+    padding-top: 1rem !important;
+    margin-top: 0.4rem;
+    border-top: 1px solid var(--app-border);
+  }
+
+  .vehicle-table__actions .btn {
+    width: 100%;
+  }
+
+  .vehicles-pagination {
+    flex-wrap: wrap;
+    padding: 1rem;
+  }
+}
+
+/* ==================================================
+   Noleggi attivi nella dashboard
+   ================================================== */
+
+.dashboard-active-rentals {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  box-shadow: var(--app-shadow);
+}
+
+.dashboard-active-rentals__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.dashboard-active-rentals__count {
+  padding: 0.55rem 0.8rem;
+  color: var(--app-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background-color: var(--app-primary-soft);
+  border-radius: 999px;
+}
+
+.dashboard-active-rentals__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
+  gap: 1rem;
+}
+
+/* Scheda del singolo noleggio attivo. */
+.dashboard-rental-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.1rem;
+  background-color: #f8faf9;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+}
+
+.dashboard-rental-card__top {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e7e5;
+}
+
+.dashboard-rental-card__icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--app-primary);
+  font-size: 1.1rem;
+  background-color: var(--app-primary-soft);
+  border-radius: 0.75rem;
+}
+
+.dashboard-rental-card__plate {
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-rental-card__details {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1rem 0;
+}
+
+.dashboard-rental-card__details > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashboard-rental-card__details dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dashboard-rental-card__details dd {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.dashboard-rental-card__footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  margin-top: auto;
+  border-top: 1px solid #e2e7e5;
+}
+
+.dashboard-rental-card__footer > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dashboard-rental-card__footer span {
+  color: var(--app-text-muted);
+  font-size: 0.7rem;
+}
+
+.dashboard-rental-card__footer strong {
+  font-size: 0.82rem;
+}
+
+/* Stato mostrato quando non esistono noleggi attivi. */
+.dashboard-active-rentals__empty {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.1rem;
+  color: #315f51;
+  background-color: #e5f0ec;
+  border-radius: 0.8rem;
+}
+
+.dashboard-active-rentals__empty > i {
+  font-size: 1.5rem;
+}
+
+@media (max-width: 575.98px) {
+  .dashboard-active-rentals__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-active-rentals__count {
+    white-space: normal;
+  }
+
+  .dashboard-rental-card__details > div,
+  .dashboard-rental-card__footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-rental-card__details dd {
+    padding-left: 1.35rem;
+    text-align: left;
+  }
+
+  .dashboard-rental-card__footer .btn {
+    width: 100%;
   }
 }

@@ -134,6 +134,12 @@ class DashboardService
                 'expenses_by_category' => $expenseBreakdown,
             ],
             'rentals' => $this->rentalSummary($periodRentals),
+
+            // Elenca i noleggi attualmente in corso con mezzo e cliente
+            'active_rentals' => $this->activeRentalSummary(
+                $vehicleId
+            ),
+
             'fleet' => $this->fleetSummary($vehicles, $vehicleIds),
             'garage' => $this->garageSummary(),
             'utilization' => $this->utilizationSummary(
@@ -164,6 +170,76 @@ class DashboardService
                 ->where('status', Rental::STATUS_CANCELLED)
                 ->count(),
         ];
+    }
+
+    // Restituisce i dettagli dei noleggi attualmente in corso
+    private function activeRentalSummary(
+        ?int $vehicleId
+    ): array {
+        return Rental::query()
+            // Evita richieste aggiuntive per ogni mezzo e cliente
+            ->with([
+                'vehicle',
+                'customer',
+            ])
+
+            // Applica il filtro quando viene analizzato un solo veicolo
+            ->when(
+                $vehicleId !== null,
+                fn ($query) => $query->where(
+                    'vehicle_id',
+                    $vehicleId
+                )
+            )
+
+            // Recupera soltanto i noleggi realmente attivi
+            ->where(
+                'status',
+                Rental::STATUS_ACTIVE
+            )
+
+            // Mostra prima i noleggi con rientro più vicino
+            ->orderBy('expected_ends_at')
+            ->get()
+            ->map(function (Rental $rental): array {
+                $customerName = trim(
+                    ($rental->customer?->first_name ?? '')
+                    .' '
+                    .($rental->customer?->last_name ?? '')
+                );
+
+                return [
+                    'rental_id' => $rental->id,
+                    'vehicle_id' => $rental->vehicle_id,
+                    'license_plate' => $rental
+                        ->vehicle
+                        ?->license_plate,
+                    'brand' => $rental
+                        ->vehicle
+                        ?->brand,
+                    'model' => $rental
+                        ->vehicle
+                        ?->model,
+                    'customer_id' => $rental->customer_id,
+                    'customer_name' => $customerName !== ''
+                        ? $customerName
+                        : null,
+                    'actual_starts_at' => $rental
+                        ->actual_starts_at
+                        ?->toISOString(),
+                    'expected_ends_at' => $rental
+                        ->expected_ends_at
+                        ?->toISOString(),
+                    'total_amount' => $this->money(
+                        $rental->total_amount
+                    ),
+                    'amount_paid' => $this->money(
+                        $rental->amount_paid
+                    ),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     // Calcola la situazione attuale dei veicoli selezionati.

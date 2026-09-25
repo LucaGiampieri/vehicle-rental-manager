@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Customer;
 use App\Models\Expense;
 use App\Models\ParkingSpace;
 use App\Models\Rental;
@@ -112,6 +113,7 @@ class DashboardApiTest extends TestCase
                     'expenses_by_category',
                 ],
                 'rentals',
+                'active_rentals',
                 'fleet',
                 'garage',
                 'utilization',
@@ -563,5 +565,91 @@ class DashboardApiTest extends TestCase
 
         $invalidVehicle->assertUnprocessable();
         $invalidVehicle->assertJsonValidationErrors(['vehicle_id']);
+    }
+
+    // Elenca i mezzi e i clienti dei noleggi attualmente attivi
+    public function test_dashboard_lists_currently_rented_vehicles(): void
+    {
+        $this->authenticateUser();
+
+        $customer = Customer::factory()->create([
+            'first_name' => 'Mario',
+            'last_name' => 'Rossi',
+        ]);
+
+        $activeVehicle = Vehicle::factory()->create([
+            'license_plate' => 'ACTIVE-001',
+            'brand' => 'Fiat',
+            'model' => 'Panda',
+        ]);
+
+        $completedVehicle = Vehicle::factory()->create([
+            'license_plate' => 'ENDED-001',
+        ]);
+
+        // Questo noleggio deve comparire nella dashboard
+        $this->createRental($activeVehicle, [
+            'customer_id' => $customer->id,
+            'status' => Rental::STATUS_ACTIVE,
+            'starts_at' => now()->subDays(2),
+            'actual_starts_at' => now()->subDays(2),
+            'expected_ends_at' => now()->addDays(2),
+            'actual_ends_at' => null,
+            'end_mileage' => null,
+            'total_amount' => 200,
+            'amount_paid' => 100,
+        ]);
+
+        // Un noleggio completato non deve comparire
+        $this->createRental($completedVehicle, [
+            'status' => Rental::STATUS_COMPLETED,
+            'starts_at' => now()->subDays(5),
+            'actual_starts_at' => now()->subDays(5),
+            'expected_ends_at' => now()->subDays(3),
+            'actual_ends_at' => now()->subDays(3),
+        ]);
+
+        $response = $this->getJson('/api/dashboard');
+
+        $response->assertOk();
+        $response->assertJsonCount(
+            1,
+            'data.active_rentals'
+        );
+
+        $response->assertJsonPath(
+            'data.active_rentals.0.vehicle_id',
+            $activeVehicle->id
+        );
+
+        $response->assertJsonPath(
+            'data.active_rentals.0.license_plate',
+            'ACTIVE-001'
+        );
+
+        $response->assertJsonPath(
+            'data.active_rentals.0.brand',
+            'Fiat'
+        );
+
+        $response->assertJsonPath(
+            'data.active_rentals.0.model',
+            'Panda'
+        );
+
+        $response->assertJsonPath(
+            'data.active_rentals.0.customer_name',
+            'Mario Rossi'
+        );
+
+        $response->assertJsonPath(
+            'data.active_rentals.0.total_amount',
+            200
+        );
+
+        $response->assertJsonPath(
+            'data.active_rentals.0.amount_paid',
+            100
+        );
     }
 }

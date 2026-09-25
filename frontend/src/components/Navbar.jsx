@@ -4,7 +4,11 @@ import { useAuth } from "../context/AuthContext";
 
 function Navbar() {
   const { user, logout } = useAuth();
+
+  // Indica che la richiesta di logout è in corso.
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Conserva un eventuale errore durante il logout.
   const [logoutError, setLogoutError] = useState("");
 
   async function handleLogout() {
@@ -12,7 +16,6 @@ function Navbar() {
     setIsLoggingOut(true);
 
     try {
-      // Il provider svuota user: RequireAuth reindirizza da solo al login.
       await logout();
     } catch {
       setLogoutError("Uscita non riuscita. Riprova.");
@@ -21,33 +24,81 @@ function Navbar() {
     }
   }
 
+  // Mostra la prima lettera del nome nell'avatar.
+  const userInitial = user?.name?.trim().charAt(0).toUpperCase() || "U";
+
   return (
-    <header className="bg-dark text-white">
-      <div className="container py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <Link to="/" className="text-white text-decoration-none fw-bold">
-          <i className="bi bi-car-front-fill me-2" aria-hidden="true"></i>
-          Vehicle Rental Manager
+    <header className="app-navbar">
+      <div className="container app-navbar__inner">
+        {/* Marchio dell'applicazione. */}
+        <Link to="/" className="app-brand">
+          <span className="app-brand__icon">
+            <i className="bi bi-car-front-fill" aria-hidden="true"></i>
+          </span>
+
+          <span className="app-brand__content">
+            <span className="app-brand__name">Vehicle Rental Manager</span>
+
+            <span className="app-brand__subtitle">Gestione flotta</span>
+          </span>
         </Link>
 
-        <nav className="d-flex gap-3" aria-label="Navigazione principale">
-          <NavLink to="/" end className="text-white">
+        {/* Navigazione principale. */}
+        <nav className="app-navigation" aria-label="Navigazione principale">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `app-navigation__link ${
+                isActive ? "app-navigation__link--active" : ""
+              }`
+            }
+          >
+            <i className="bi bi-speedometer2" aria-hidden="true"></i>
             Dashboard
           </NavLink>
-          <NavLink to="/vehicles" className="text-white">
+
+          <NavLink
+            to="/vehicles"
+            className={({ isActive }) =>
+              `app-navigation__link ${
+                isActive ? "app-navigation__link--active" : ""
+              }`
+            }
+          >
+            <i className="bi bi-car-front" aria-hidden="true"></i>
             Veicoli
           </NavLink>
         </nav>
 
-        <div className="d-flex align-items-center gap-3">
-          {/* Il nome arriva da /api/user dopo il controllo della sessione. */}
-          <span>Ciao, {user.name}</span>
+        {/* Informazioni dell'utente autenticato. */}
+        <div className="app-user">
+          <span className="app-user__avatar" aria-hidden="true">
+            {userInitial}
+          </span>
+
+          <div className="app-user__information">
+            <span className="app-user__name">{user?.name ?? "Utente"}</span>
+
+            <span className="app-user__role">Amministratore</span>
+          </div>
+
           <button
             type="button"
-            className="btn btn-outline-light btn-sm"
+            className="app-logout-button"
             onClick={handleLogout}
             disabled={isLoggingOut}
+            aria-label="Esci dall'applicazione"
+            title="Esci"
           >
-            {isLoggingOut ? "Uscita..." : "Esci"}
+            {isLoggingOut ? (
+              <span
+                className="spinner-border spinner-border-sm"
+                aria-hidden="true"
+              ></span>
+            ) : (
+              <i className="bi bi-box-arrow-right" aria-hidden="true"></i>
+            )}
           </button>
         </div>
 

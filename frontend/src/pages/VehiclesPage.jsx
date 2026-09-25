@@ -125,32 +125,47 @@ function VehiclesPage() {
 
   return (
     <>
-      <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+      {/* Intestazione principale della gestione della flotta. */}
+      <header className="vehicles-page-header">
         <div>
-          <h1 className="mb-1">Veicoli</h1>
+          <span className="page-eyebrow">Gestione flotta</span>
+
+          <h1 className="mb-2">Veicoli</h1>
 
           <p className="text-secondary mb-0">
-            Consulta e gestisci tutti i mezzi registrati.
+            Consulta, cerca e gestisci tutti i mezzi registrati
+            nell’autonoleggio.
           </p>
         </div>
 
-        <div className="d-flex flex-wrap align-items-center gap-3">
-          {!errorMessage && (
-            <span className="text-secondary">Totale: {pagination.total}</span>
-          )}
-
-          <Link to="/vehicles/new" className="btn btn-primary">
-            <i className="bi bi-plus-lg me-2" aria-hidden="true"></i>
-            Nuovo veicolo
-          </Link>
-        </div>
-      </div>
+        <Link to="/vehicles/new" className="btn btn-primary">
+          <i className="bi bi-plus-lg me-2" aria-hidden="true"></i>
+          Nuovo veicolo
+        </Link>
+      </header>
 
       <form
-        className="card border-0 shadow-sm mb-4"
+        className="card border-0 shadow-sm mb-4 vehicles-filter-card"
         onSubmit={handleSearchSubmit}
       >
         <div className="card-body">
+          <div className="vehicles-filter-card__header">
+            <div>
+              <span className="page-eyebrow">Ricerca e filtri</span>
+
+              <h2 className="h5 mb-1">Trova un veicolo</h2>
+
+              <p className="text-secondary small mb-0">
+                Cerca per targa, marca o modello e restringi i risultati
+                utilizzando i filtri.
+              </p>
+            </div>
+
+            <i
+              className="bi bi-funnel vehicles-filter-card__icon"
+              aria-hidden="true"
+            ></i>
+          </div>
           <div className="row g-3 align-items-end">
             <div className="col-12 col-lg">
               <label
@@ -273,9 +288,35 @@ function VehiclesPage() {
       )}
 
       {!errorMessage && vehicles.length > 0 && (
-        <>
-          <div className="table-responsive">
-            <table className="table table-striped align-middle">
+        <section
+          className="vehicles-list-section"
+          aria-labelledby="vehicles-list-title"
+        >
+          <header className="vehicles-list-section__header">
+            <div>
+              <span className="page-eyebrow">Archivio flotta</span>
+
+              <h2 id="vehicles-list-title" className="h5 mb-1">
+                Elenco veicoli
+              </h2>
+
+              <p className="text-secondary small mb-0">
+                Visualizzi {vehicles.length}{" "}
+                {vehicles.length === 1 ? "veicolo" : "veicoli"} in questa
+                pagina.
+              </p>
+            </div>
+
+            <span className="vehicles-list-section__total">
+              {pagination.total}{" "}
+              {pagination.total === 1
+                ? "veicolo registrato"
+                : "veicoli registrati"}
+            </span>
+          </header>
+
+          <div className="table-responsive vehicles-table-wrapper">
+            <table className="table table-striped align-middle vehicles-table">
               <thead>
                 <tr>
                   <th scope="col">Foto</th>
@@ -293,7 +334,7 @@ function VehiclesPage() {
               <tbody>
                 {vehicles.map((vehicle) => (
                   <tr key={vehicle.id}>
-                    <td>
+                    <td className="vehicle-table__photo">
                       {vehicle.primary_image ? (
                         <img
                           src={vehicle.primary_image.url}
@@ -313,19 +354,25 @@ function VehiclesPage() {
                         </div>
                       )}
                     </td>
-                    <td className="fw-semibold">{vehicle.license_plate}</td>
-
-                    <td>
-                      {vehicle.brand} {vehicle.model}
+                    <td className="fw-semibold" data-label="Targa">
+                      {vehicle.license_plate}
                     </td>
 
-                    <td>{VEHICLE_TYPE_LABELS[vehicle.type] ?? vehicle.type}</td>
+                    <td data-label="Veicolo">
+                      <span className="vehicle-table__name">
+                        {vehicle.brand} {vehicle.model}
+                      </span>
+                    </td>
+
+                    <td data-label="Tipo">
+                      {VEHICLE_TYPE_LABELS[vehicle.type] ?? vehicle.type}
+                    </td>
 
                     <td>
                       {Number(vehicle.mileage).toLocaleString("it-IT")} km
                     </td>
 
-                    <td>
+                    <td data-label="Stato">
                       <span
                         className={
                           vehicle.is_active
@@ -336,7 +383,7 @@ function VehiclesPage() {
                         {vehicle.is_active ? "Attivo" : "Disattivato"}
                       </span>
                     </td>
-                    <td className="text-end">
+                    <td className="text-end vehicle-table__actions">
                       <Link
                         to={`/vehicles/${vehicle.id}/${createSlug(
                           [vehicle.brand, vehicle.model].join(" "),
@@ -356,7 +403,7 @@ function VehiclesPage() {
 
           {pagination.lastPage > 1 && (
             <nav
-              className="d-flex justify-content-center align-items-center gap-3"
+              className="vehicles-pagination d-flex justify-content-center align-items-center gap-3"
               aria-label="Paginazione dei veicoli"
             >
               <button
@@ -392,7 +439,7 @@ function VehiclesPage() {
               </button>
             </nav>
           )}
-        </>
+        </section>
       )}
     </>
   );

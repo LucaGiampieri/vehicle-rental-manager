@@ -3,14 +3,14 @@ import Navbar from "../components/Navbar";
 
 function DefaultLayout() {
   return (
-    <>
+    <div className="app-shell">
       <Navbar />
 
-      <main className="container py-5">
-        {/* La barra è comune; qui React Router inserisce la pagina corrente. */}
+      {/* Contenitore principale condiviso da tutte le pagine protette. */}
+      <main className="container app-main">
         <Outlet />
       </main>
-    </>
+    </div>
   );
 }
 
