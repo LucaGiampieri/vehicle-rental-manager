@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Loader from "../components/Loader";
-import createSlug from "../utils/createSlug";
 import api from "../services/api";
+import createSlug from "../utils/createSlug";
 
 // Associa i valori tecnici del backend alle etichette italiane.
 const VEHICLE_TYPE_LABELS = {
@@ -15,6 +15,106 @@ const VEHICLE_TYPE_LABELS = {
   other: "Altro",
 };
 
+// Definisce etichetta, icona e stile di ogni stato operativo.
+const OPERATIONAL_STATUS_CONFIG = {
+  available: {
+    label: "Disponibile",
+    icon: "bi-check-circle-fill",
+    className: "vehicle-operational-status--available",
+  },
+  reserved: {
+    label: "Prenotato",
+    icon: "bi-calendar-check-fill",
+    className: "vehicle-operational-status--reserved",
+  },
+  rented: {
+    label: "Noleggiato",
+    icon: "bi-key-fill",
+    className: "vehicle-operational-status--rented",
+  },
+  inactive: {
+    label: "Disattivato",
+    icon: "bi-slash-circle-fill",
+    className: "vehicle-operational-status--inactive",
+  },
+};
+
+// Formatta gli importi utilizzando euro e convenzioni italiane.
+function formatCurrency(value) {
+  return new Intl.NumberFormat("it-IT", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(value ?? 0));
+}
+
+// Formatta una data completa soltanto quando è disponibile.
+function formatDateTime(value) {
+  if (!value) {
+    return "Data non disponibile";
+  }
+
+  return new Intl.DateTimeFormat("it-IT", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+// Compone il nome completo del cliente collegato al noleggio.
+function getCustomerName(rental) {
+  const customer = rental?.customer;
+
+  if (!customer) {
+    return "Cliente non disponibile";
+  }
+
+  return `${customer.first_name} ${customer.last_name}`.trim();
+}
+
+// Mostra lo stato e, solo quando serve, il prossimo momento importante.
+function VehicleOperationalStatus({ vehicle }) {
+  const config =
+    OPERATIONAL_STATUS_CONFIG[vehicle.operational_status] ??
+    OPERATIONAL_STATUS_CONFIG.available;
+
+  let detail = null;
+  let dateLabel = null;
+  let dateValue = null;
+
+  if (vehicle.operational_status === "rented" && vehicle.active_rental) {
+    detail = getCustomerName(vehicle.active_rental);
+    dateLabel = "Rientro";
+    dateValue = vehicle.active_rental.expected_ends_at;
+  }
+
+  if (
+    vehicle.operational_status === "reserved" &&
+    vehicle.next_reservation
+  ) {
+    detail = getCustomerName(vehicle.next_reservation);
+    dateLabel = "Inizio";
+    dateValue = vehicle.next_reservation.starts_at;
+  }
+
+  return (
+    <div className={`vehicle-operational-status ${config.className}`}>
+      <div className="vehicle-operational-status__heading">
+        <i className={`bi ${config.icon}`} aria-hidden="true"></i>
+        <strong>{config.label}</strong>
+      </div>
+
+      {detail && (
+        <span className="vehicle-operational-status__detail">{detail}</span>
+      )}
+
+      {dateLabel && dateValue && (
+        <span className="vehicle-operational-status__date">
+          {dateLabel}: {formatDateTime(dateValue)}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function VehiclesPage() {
   // Conserva i veicoli presenti nella pagina corrente.
   const [vehicles, setVehicles] = useState([]);
@@ -22,54 +122,38 @@ function VehiclesPage() {
   // Indica quale pagina vogliamo richiedere al backend.
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Conserva quello che l'utente sta scrivendo nel campo.
+  // Conserva il testo digitato e quello effettivamente ricercato.
   const [searchInput, setSearchInput] = useState("");
-
-  // Conserva la ricerca effettivamente inviata al backend.
   const [search, setSearch] = useState("");
 
-  // Conserva il tipo di veicolo selezionato.
+  // Conserva i filtri selezionati.
   const [typeFilter, setTypeFilter] = useState("");
-
-  // Conserva lo stato attivo/disattivato selezionato.
   const [activeFilter, setActiveFilter] = useState("");
 
-  // Conserva le informazioni sulla paginazione restituite da Laravel.
+  // Conserva i metadati della paginazione Laravel.
   const [pagination, setPagination] = useState({
     currentPage: 1,
     lastPage: 1,
     total: 0,
   });
 
-  // Gestisce il caricamento e gli eventuali errori.
+  // Gestisce caricamento ed eventuali errori della richiesta.
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Avvia la ricerca quando viene inviato il modulo.
+  // Applica la ricerca senza ricaricare l'intera pagina.
   function handleSearchSubmit(event) {
-    // Impedisce al browser di ricaricare tutta la pagina.
     event.preventDefault();
-
-    // Una nuova ricerca deve sempre ripartire dalla prima pagina.
     setCurrentPage(1);
-
-    // Rimuove gli spazi esterni e applica il testo della ricerca.
     setSearch(searchInput.trim());
   }
 
-  // Elimina la ricerca e ricarica l'elenco completo.
+  // Ripristina ricerca, filtri e prima pagina.
   function handleSearchReset() {
-    // Svuota il campo visibile.
     setSearchInput("");
-
-    // Rimuove il parametro inviato al backend.
     setSearch("");
-
-    // Ripristina tutti i tipi e tutti gli stati.
     setTypeFilter("");
     setActiveFilter("");
-
-    // Dopo l'azzeramento torniamo alla prima pagina.
     setCurrentPage(1);
   }
 
@@ -77,13 +161,11 @@ function VehiclesPage() {
     const controller = new AbortController();
 
     async function loadVehicles() {
-      // Il loader viene riattivato anche quando cambiamo pagina.
       setIsLoading(true);
       setErrorMessage("");
 
       try {
         const response = await api.get("/api/vehicles", {
-          // Axios trasforma questo valore in ?page=1, ?page=2 e così via.
           params: {
             page: currentPage,
             per_page: 10,
@@ -94,10 +176,7 @@ function VehiclesPage() {
           signal: controller.signal,
         });
 
-        // Salva i veicoli appartenenti solamente alla pagina richiesta.
         setVehicles(response.data.data);
-
-        // Salva i metadati della paginazione restituiti da Laravel.
         setPagination({
           currentPage: response.data.meta.current_page,
           lastPage: response.data.meta.last_page,
@@ -129,12 +208,9 @@ function VehiclesPage() {
       <header className="vehicles-page-header">
         <div>
           <span className="page-eyebrow">Gestione flotta</span>
-
           <h1 className="mb-2">Veicoli</h1>
-
           <p className="text-secondary mb-0">
-            Consulta, cerca e gestisci tutti i mezzi registrati
-            nell’autonoleggio.
+            Controlla disponibilità, prenotazioni e noleggi dell'intera flotta.
           </p>
         </div>
 
@@ -144,6 +220,7 @@ function VehiclesPage() {
         </Link>
       </header>
 
+      {/* Ricerca e filtri inviati alle API Laravel. */}
       <form
         className="card border-0 shadow-sm mb-4 vehicles-filter-card"
         onSubmit={handleSearchSubmit}
@@ -152,12 +229,9 @@ function VehiclesPage() {
           <div className="vehicles-filter-card__header">
             <div>
               <span className="page-eyebrow">Ricerca e filtri</span>
-
               <h2 className="h5 mb-1">Trova un veicolo</h2>
-
               <p className="text-secondary small mb-0">
-                Cerca per targa, marca o modello e restringi i risultati
-                utilizzando i filtri.
+                Cerca per targa, marca o modello e restringi i risultati.
               </p>
             </div>
 
@@ -166,6 +240,7 @@ function VehiclesPage() {
               aria-hidden="true"
             ></i>
           </div>
+
           <div className="row g-3 align-items-end">
             <div className="col-12 col-lg">
               <label
@@ -186,9 +261,7 @@ function VehiclesPage() {
                   className="form-control"
                   placeholder="Targa, marca o modello"
                   value={searchInput}
-                  onChange={(event) => {
-                    setSearchInput(event.target.value);
-                  }}
+                  onChange={(event) => setSearchInput(event.target.value)}
                 />
               </div>
             </div>
@@ -220,14 +293,14 @@ function VehiclesPage() {
 
             <div className="col-12 col-md-6 col-lg-2">
               <label
-                htmlFor="vehicle-status"
+                htmlFor="vehicle-activation"
                 className="form-label fw-semibold"
               >
-                Stato
+                Attivazione
               </label>
 
               <select
-                id="vehicle-status"
+                id="vehicle-activation"
                 className="form-select"
                 value={activeFilter}
                 onChange={(event) => {
@@ -235,9 +308,9 @@ function VehiclesPage() {
                   setCurrentPage(1);
                 }}
               >
-                <option value="">Tutti gli stati</option>
-                <option value="true">Attivi</option>
-                <option value="false">Disattivati</option>
+                <option value="">Tutti</option>
+                <option value="true">Mezzi attivi</option>
+                <option value="false">Mezzi disattivati</option>
               </select>
             </div>
 
@@ -295,15 +368,11 @@ function VehiclesPage() {
           <header className="vehicles-list-section__header">
             <div>
               <span className="page-eyebrow">Archivio flotta</span>
-
               <h2 id="vehicles-list-title" className="h5 mb-1">
                 Elenco veicoli
               </h2>
-
               <p className="text-secondary small mb-0">
-                Visualizzi {vehicles.length}{" "}
-                {vehicles.length === 1 ? "veicolo" : "veicoli"} in questa
-                pagina.
+                Ogni riga mostra disponibilità e prossimo impegno del mezzo.
               </p>
             </div>
 
@@ -316,14 +385,19 @@ function VehiclesPage() {
           </header>
 
           <div className="table-responsive vehicles-table-wrapper">
-            <table className="table table-striped align-middle vehicles-table">
+            <table className="table align-middle vehicles-table">
+              {/* Le larghezze rendono le informazioni regolari sul desktop. */}
+              <colgroup>
+                <col className="vehicles-table__vehicle-column" />
+                <col className="vehicles-table__rate-column" />
+                <col className="vehicles-table__status-column" />
+                <col className="vehicles-table__actions-column" />
+              </colgroup>
+
               <thead>
                 <tr>
-                  <th scope="col">Foto</th>
-                  <th scope="col">Targa</th>
                   <th scope="col">Veicolo</th>
-                  <th scope="col">Tipo</th>
-                  <th scope="col">Chilometri</th>
+                  <th scope="col">Tariffa</th>
                   <th scope="col">Stato</th>
                   <th scope="col" className="text-end">
                     Azioni
@@ -334,55 +408,64 @@ function VehiclesPage() {
               <tbody>
                 {vehicles.map((vehicle) => (
                   <tr key={vehicle.id}>
-                    <td className="vehicle-table__photo">
-                      {vehicle.primary_image ? (
-                        <img
-                          src={vehicle.primary_image.url}
-                          alt={
-                            vehicle.primary_image.caption ||
-                            `Foto di ${vehicle.brand} ${vehicle.model}`
-                          }
-                          className="vehicle-thumbnail"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div
-                          className="vehicle-thumbnail vehicle-thumbnail--placeholder"
-                          aria-label="Fotografia non disponibile"
-                        >
-                          <i className="bi bi-car-front" aria-hidden="true"></i>
-                        </div>
-                      )}
-                    </td>
-                    <td className="fw-semibold" data-label="Targa">
-                      {vehicle.license_plate}
-                    </td>
-
                     <td data-label="Veicolo">
-                      <span className="vehicle-table__name">
-                        {vehicle.brand} {vehicle.model}
-                      </span>
+                      <div className="vehicle-table-identity">
+                        {vehicle.primary_image ? (
+                          <img
+                            src={vehicle.primary_image.url}
+                            alt={
+                              vehicle.primary_image.caption ||
+                              `Foto di ${vehicle.brand} ${vehicle.model}`
+                            }
+                            className="vehicle-thumbnail"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div
+                            className="vehicle-thumbnail vehicle-thumbnail--placeholder"
+                            aria-label="Fotografia non disponibile"
+                          >
+                            <i
+                              className="bi bi-car-front"
+                              aria-hidden="true"
+                            ></i>
+                          </div>
+                        )}
+
+                        <div>
+                          <span className="vehicle-table__name">
+                            {vehicle.brand} {vehicle.model}
+                          </span>
+                          <span className="vehicle-table__plate">
+                            <small>Targa</small>
+                            {vehicle.license_plate}
+                          </span>
+                          <span className="vehicle-table__meta">
+                            <span>
+                              {VEHICLE_TYPE_LABELS[vehicle.type] ?? vehicle.type}
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span>
+                              {Number(vehicle.mileage).toLocaleString("it-IT")} km
+                            </span>
+                          </span>
+                        </div>
+                      </div>
                     </td>
 
-                    <td data-label="Tipo">
-                      {VEHICLE_TYPE_LABELS[vehicle.type] ?? vehicle.type}
-                    </td>
-
-                    <td>
-                      {Number(vehicle.mileage).toLocaleString("it-IT")} km
+                    <td data-label="Tariffa">
+                      <div className="vehicle-table-rate">
+                        <strong>
+                          {formatCurrency(vehicle.daily_rate)}
+                          <small>/giorno</small>
+                        </strong>
+                      </div>
                     </td>
 
                     <td data-label="Stato">
-                      <span
-                        className={
-                          vehicle.is_active
-                            ? "badge text-bg-success"
-                            : "badge text-bg-secondary"
-                        }
-                      >
-                        {vehicle.is_active ? "Attivo" : "Disattivato"}
-                      </span>
+                      <VehicleOperationalStatus vehicle={vehicle} />
                     </td>
+
                     <td className="text-end vehicle-table__actions">
                       <Link
                         to={`/vehicles/${vehicle.id}/${createSlug(
@@ -412,9 +495,7 @@ function VehiclesPage() {
                   pagination.currentPage === 1 ? "invisible" : ""
                 }`}
                 disabled={pagination.currentPage === 1}
-                onClick={() => {
-                  setCurrentPage((page) => page - 1);
-                }}
+                onClick={() => setCurrentPage((page) => page - 1)}
               >
                 Precedente
               </button>
@@ -431,9 +512,7 @@ function VehiclesPage() {
                     : ""
                 }`}
                 disabled={pagination.currentPage === pagination.lastPage}
-                onClick={() => {
-                  setCurrentPage((page) => page + 1);
-                }}
+                onClick={() => setCurrentPage((page) => page + 1)}
               >
                 Successiva
               </button>

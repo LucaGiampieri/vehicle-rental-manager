@@ -23,6 +23,149 @@ const IMAGE_CATEGORY_LABELS = {
   other: "Altro",
 };
 
+// Associa a ogni stato operativo un testo, un'icona e un colore distinti.
+const OPERATIONAL_STATUS_CONFIG = {
+  available: {
+    label: "Disponibile",
+    icon: "bi-check-circle-fill",
+    className: "vehicle-status--available",
+  },
+  reserved: {
+    label: "Prenotato",
+    icon: "bi-calendar-check-fill",
+    className: "vehicle-status--reserved",
+  },
+  rented: {
+    label: "Noleggiato",
+    icon: "bi-key-fill",
+    className: "vehicle-status--rented",
+  },
+  inactive: {
+    label: "Disattivato",
+    icon: "bi-slash-circle-fill",
+    className: "vehicle-status--inactive",
+  },
+};
+
+// Traduce le categorie delle spese registrate nel backend.
+const EXPENSE_CATEGORY_LABELS = {
+  purchase: "Acquisto",
+  maintenance: "Manutenzione",
+  repair: "Riparazione",
+  road_tax: "Bollo",
+  insurance: "Assicurazione",
+  fuel: "Carburante",
+  cleaning: "Pulizia",
+  inspection: "Revisione",
+  other: "Altro",
+};
+
+// Traduce gli stati dello storico dei noleggi.
+const RENTAL_STATUS_LABELS = {
+  reserved: "Prenotato",
+  active: "In corso",
+  completed: "Completato",
+  cancelled: "Annullato",
+};
+
+// Traduce i movimenti dell'autorimessa; i valori sconosciuti restano leggibili.
+const GARAGE_MOVEMENT_LABELS = {
+  park: "Ingresso in autorimessa",
+  parked: "Ingresso in autorimessa",
+  move: "Spostamento interno",
+  moved: "Spostamento interno",
+  unpark: "Uscita dall'autorimessa",
+  unparked: "Uscita dall'autorimessa",
+  rental_departure: "Uscita per noleggio",
+  rental_return: "Rientro dal noleggio",
+};
+
+// Formatta una cifra come importo in euro.
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === "") {
+    return "Non impostata";
+  }
+
+  return new Intl.NumberFormat("it-IT", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(value));
+}
+
+// Formatta data e ora usando le convenzioni italiane.
+function formatDateTime(value) {
+  if (!value) {
+    return "Non disponibile";
+  }
+
+  return new Intl.DateTimeFormat("it-IT", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+// Formatta una data senza mostrare l'orario.
+function formatDate(value) {
+  if (!value) {
+    return "Non prevista";
+  }
+
+  return new Intl.DateTimeFormat("it-IT", {
+    dateStyle: "medium",
+  }).format(new Date(value));
+}
+
+// Restituisce un testo chiaro sullo stato di una scadenza.
+function getDeadlineStatus(expense) {
+  if (!expense.expires_on) {
+    return {
+      label: "Nessuna scadenza",
+      className: "vehicle-record-status--neutral",
+    };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const deadline = new Date(`${expense.expires_on}T00:00:00`);
+  const days = Math.ceil((deadline - today) / 86_400_000);
+
+  if (days < 0) {
+    return {
+      label: `Scaduta da ${Math.abs(days)} ${Math.abs(days) === 1 ? "giorno" : "giorni"}`,
+      className: "vehicle-record-status--danger",
+    };
+  }
+
+  if (days === 0) {
+    return {
+      label: "Scade oggi",
+      className: "vehicle-record-status--danger",
+    };
+  }
+
+  if (days <= 30) {
+    return {
+      label: `Scade tra ${days} ${days === 1 ? "giorno" : "giorni"}`,
+      className: "vehicle-record-status--warning",
+    };
+  }
+
+  return {
+    label: `Scade tra ${days} giorni`,
+    className: "vehicle-record-status--success",
+  };
+}
+
+// Compone il nome del cliente presente nel riepilogo del noleggio.
+function getCustomerName(rental) {
+  if (!rental?.customer) {
+    return "Cliente non disponibile";
+  }
+
+  return `${rental.customer.first_name} ${rental.customer.last_name}`.trim();
+}
+
 function VehicleDetailsPage() {
   // Legge il parametro dinamico presente nell'indirizzo.
   const { vehicleId } = useParams();
@@ -36,8 +179,8 @@ function VehicleDetailsPage() {
   // Conserva la fotografia mostrata nel riquadro principale.
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // Conserva il file scelto dall'utente.
-  const [imageFile, setImageFile] = useState(null);
+  // Conserva uno o più file scelti dall'utente.
+  const [imageFiles, setImageFiles] = useState([]);
 
   // Indica che il caricamento di una fotografia è in corso.
   const [isUploading, setIsUploading] = useState(false);
@@ -81,6 +224,14 @@ function VehicleDetailsPage() {
   // Conserva un eventuale errore della richiesta principale.
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Conserva i dati collegati mostrati nelle sezioni di approfondimento.
+  const [expenses, setExpenses] = useState([]);
+  const [rentals, setRentals] = useState([]);
+  const [garageMovements, setGarageMovements] = useState([]);
+
+  // Un errore nei dati collegati non deve bloccare l'intera scheda.
+  const [relatedDataError, setRelatedDataError] = useState("");
+
   // Invia una nuova fotografia al backend.
   async function handleImageUpload(event) {
     event.preventDefault();
@@ -88,8 +239,20 @@ function VehicleDetailsPage() {
     // Conserva il form per poterlo svuotare dopo il caricamento.
     const form = event.currentTarget;
 
-    if (!imageFile) {
-      setUploadError("Seleziona una fotografia da caricare.");
+    if (imageFiles.length === 0) {
+      setUploadError("Seleziona almeno una fotografia da caricare.");
+
+      return;
+    }
+
+    const currentImageCount = vehicle?.images?.length ?? 0;
+
+    if (currentImageCount + imageFiles.length > 10) {
+      setUploadError(
+        `Puoi aggiungere al massimo ${10 - currentImageCount} ${
+          10 - currentImageCount === 1 ? "fotografia" : "fotografie"
+        }. Il limite complessivo è di 10.`,
+      );
 
       return;
     }
@@ -101,16 +264,23 @@ function VehicleDetailsPage() {
      * FormData permette di inviare file tramite multipart/form-data.
      * Il nome "image" deve corrispondere a quello validato da Laravel.
      */
-    const formData = new FormData();
-    formData.append("image", imageFile);
-
     try {
-      const response = await api.post(
-        `/api/vehicles/${vehicleId}/images`,
-        formData,
-      );
+      const uploadedImages = [];
 
-      const uploadedImage = response.data.data;
+      // L'API riceve una foto per richiesta: il frontend le invia in sequenza.
+      for (const imageFile of imageFiles) {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+
+        const response = await api.post(
+          `/api/vehicles/${vehicleId}/images`,
+          formData,
+        );
+
+        uploadedImages.push(response.data.data);
+      }
+
+      const lastUploadedImage = uploadedImages.at(-1);
 
       /*
        * Aggiunge la fotografia alla copia locale del veicolo,
@@ -125,20 +295,21 @@ function VehicleDetailsPage() {
 
         return {
           ...currentVehicle,
-          images: [...currentImages, uploadedImage],
+          images: [...currentImages, ...uploadedImages],
           images_count:
-            (currentVehicle.images_count ?? currentImages.length) + 1,
-          primary_image: uploadedImage.is_primary
-            ? uploadedImage
+            (currentVehicle.images_count ?? currentImages.length) +
+            uploadedImages.length,
+          primary_image: uploadedImages.find((image) => image.is_primary)
+            ? uploadedImages.find((image) => image.is_primary)
             : currentVehicle.primary_image,
         };
       });
 
-      // Mostra immediatamente la fotografia appena caricata.
-      setSelectedImage(uploadedImage);
+      // Mostra immediatamente l'ultima fotografia caricata.
+      setSelectedImage(lastUploadedImage);
 
-      // Svuota il file selezionato e il campo del modulo.
-      setImageFile(null);
+      // Svuota i file selezionati e il campo del modulo.
+      setImageFiles([]);
       form.reset();
     } catch (error) {
       // Recupera l'eventuale messaggio di validazione inviato da Laravel.
@@ -428,6 +599,10 @@ function VehicleDetailsPage() {
       setErrorMessage("");
       setVehicle(null);
       setSelectedImage(null);
+      setExpenses([]);
+      setRentals([]);
+      setGarageMovements([]);
+      setRelatedDataError("");
 
       try {
         /*
@@ -447,6 +622,60 @@ function VehicleDetailsPage() {
         setSelectedImage(
           loadedVehicle.primary_image ?? loadedVehicle.images?.[0] ?? null,
         );
+
+        /*
+         * Le tre richieste secondarie partono insieme.
+         * allSettled permette di conservare i dati riusciti anche se
+         * una sola sezione non è momentaneamente disponibile.
+         */
+        const [expensesResult, rentalsResult, movementsResult] =
+          await Promise.allSettled([
+            api.get("/api/expenses", {
+              params: {
+                vehicle_id: vehicleId,
+                per_page: 100,
+              },
+              signal: controller.signal,
+            }),
+            api.get("/api/rentals", {
+              params: {
+                vehicle_id: vehicleId,
+                per_page: 100,
+              },
+              signal: controller.signal,
+            }),
+            api.get(`/api/garage/vehicles/${vehicleId}/movements`, {
+              signal: controller.signal,
+            }),
+          ]);
+
+        if (expensesResult.status === "fulfilled") {
+          setExpenses(expensesResult.value.data.data ?? []);
+        }
+
+        if (rentalsResult.status === "fulfilled") {
+          setRentals(rentalsResult.value.data.data ?? []);
+        }
+
+        if (movementsResult.status === "fulfilled") {
+          setGarageMovements(movementsResult.value.data.data ?? []);
+        }
+
+        const hasRelatedDataError = [
+          expensesResult,
+          rentalsResult,
+          movementsResult,
+        ].some(
+          (result) =>
+            result.status === "rejected" &&
+            result.reason?.code !== "ERR_CANCELED",
+        );
+
+        if (hasRelatedDataError) {
+          setRelatedDataError(
+            "Alcuni dati collegati non sono disponibili. Ricarica la pagina per riprovare.",
+          );
+        }
       } catch (error) {
         // Non mostra errori quando la richiesta è stata annullata.
         if (error.code !== "ERR_CANCELED") {
@@ -497,6 +726,10 @@ function VehicleDetailsPage() {
     return null;
   }
 
+  const operationalStatus =
+    OPERATIONAL_STATUS_CONFIG[vehicle.operational_status] ??
+    OPERATIONAL_STATUS_CONFIG.available;
+
   return (
     <>
       <Link
@@ -507,38 +740,56 @@ function VehicleDetailsPage() {
         Torna ai veicoli
       </Link>
 
-      {/* Intestazione del veicolo. */}
-      <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-        <div>
-          <h1 className="mb-1">
+      {/* Intestazione: identità del mezzo e azioni principali. */}
+      <header className="vehicle-detail-header">
+        <div className="vehicle-detail-header__identity">
+          <span className="page-eyebrow">Scheda veicolo</span>
+
+          <h1 className="mb-2">
             {vehicle.brand} {vehicle.model}
           </h1>
 
-          <p className="text-secondary mb-0">
-            Targa: <strong>{vehicle.license_plate}</strong>
-          </p>
+          <span className="vehicle-detail-plate">
+            <small>Targa</small>
+            <strong>{vehicle.license_plate}</strong>
+          </span>
         </div>
 
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <span
-            className={
-              vehicle.is_active
-                ? "badge text-bg-success fs-6"
-                : "badge text-bg-secondary fs-6"
-            }
-          >
-            {vehicle.is_active ? "Attivo" : "Disattivato"}
-          </span>
-
+        <div className="vehicle-detail-header__actions">
           <Link
             to={`/vehicles/${vehicle.id}/edit`}
-            className="btn btn-sm btn-outline-secondary"
+            className="btn btn-outline-secondary"
           >
             <i className="bi bi-pencil me-2" aria-hidden="true"></i>
             Modifica veicolo
           </Link>
         </div>
-      </div>
+      </header>
+
+      {/* Stato operativo immediatamente riconoscibile. */}
+      <section
+        className={`vehicle-detail-status ${operationalStatus.className}`}
+        aria-label="Stato operativo del veicolo"
+      >
+        <span className="vehicle-detail-status__icon">
+          <i className={`bi ${operationalStatus.icon}`} aria-hidden="true"></i>
+        </span>
+
+        <div>
+          <span className="vehicle-detail-status__label">Stato attuale</span>
+          <strong>{operationalStatus.label}</strong>
+        </div>
+
+        <p>
+          {vehicle.operational_status === "rented"
+            ? "Il mezzo è attualmente consegnato a un cliente."
+            : vehicle.operational_status === "reserved"
+              ? "Il mezzo ha una prenotazione futura già confermata."
+              : vehicle.operational_status === "inactive"
+                ? "Il mezzo è disattivato e non può essere noleggiato."
+                : "Il mezzo è libero e può essere assegnato a un nuovo noleggio."}
+        </p>
+      </section>
 
       {/* Fotografia principale oppure segnaposto. */}
       <div className="card border-0 shadow-sm overflow-hidden mb-2 vehicle-detail-media">
@@ -572,6 +823,118 @@ function VehicleDetailsPage() {
             {selectedImage.caption || "Nessuna descrizione"}
           </span>
         </div>
+      )}
+
+      {/* Noleggio corrente e prossima prenotazione, quando presenti. */}
+      {(vehicle.active_rental || vehicle.next_reservation) && (
+        <section
+          className="vehicle-detail-commitments"
+          aria-labelledby="vehicle-commitments-title"
+        >
+          <div className="vehicle-section-heading">
+            <div>
+              <span className="page-eyebrow">Programmazione</span>
+              <h2 id="vehicle-commitments-title" className="h4 mb-1">
+                Utilizzo del veicolo
+              </h2>
+              <p className="text-secondary mb-0">
+                Noleggio in corso e prossimo impegno registrato.
+              </p>
+            </div>
+          </div>
+
+          <div className="vehicle-commitment-grid">
+            {vehicle.active_rental && (
+              <article className="vehicle-commitment-card vehicle-commitment-card--rented">
+                <div className="vehicle-commitment-card__title">
+                  <span>
+                    <i className="bi bi-key-fill" aria-hidden="true"></i>
+                  </span>
+                  <div>
+                    <small>Noleggio attuale</small>
+                    <h3>{getCustomerName(vehicle.active_rental)}</h3>
+                  </div>
+                </div>
+
+                <dl className="vehicle-commitment-card__details">
+                  <div>
+                    <dt>Consegna</dt>
+                    <dd>
+                      {formatDateTime(
+                        vehicle.active_rental.actual_starts_at ??
+                          vehicle.active_rental.starts_at,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Rientro previsto</dt>
+                    <dd>
+                      {formatDateTime(vehicle.active_rental.expected_ends_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Totale</dt>
+                    <dd>
+                      {formatCurrency(vehicle.active_rental.total_amount)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Da saldare</dt>
+                    <dd>
+                      {formatCurrency(vehicle.active_rental.balance_due)}
+                    </dd>
+                  </div>
+                </dl>
+              </article>
+            )}
+
+            {vehicle.next_reservation && (
+              <article className="vehicle-commitment-card vehicle-commitment-card--reserved">
+                <div className="vehicle-commitment-card__title">
+                  <span>
+                    <i
+                      className="bi bi-calendar-check-fill"
+                      aria-hidden="true"
+                    ></i>
+                  </span>
+                  <div>
+                    <small>Prossima prenotazione</small>
+                    <h3>{getCustomerName(vehicle.next_reservation)}</h3>
+                  </div>
+                </div>
+
+                <dl className="vehicle-commitment-card__details">
+                  <div>
+                    <dt>Inizio</dt>
+                    <dd>
+                      {formatDateTime(vehicle.next_reservation.starts_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Rientro previsto</dt>
+                    <dd>
+                      {formatDateTime(
+                        vehicle.next_reservation.expected_ends_at,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Totale</dt>
+                    <dd>
+                      {formatCurrency(vehicle.next_reservation.total_amount)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Da saldare</dt>
+                    <dd>
+                      {formatCurrency(vehicle.next_reservation.balance_due)}
+                    </dd>
+                  </div>
+                </dl>
+              </article>
+            )}
+          </div>
+        </section>
       )}
 
       {/* Galleria e pannello di gestione delle fotografie. */}
@@ -618,12 +981,12 @@ function VehicleDetailsPage() {
             onSubmit={handleImageUpload}
           >
             <div className="card-body">
-              <h3 className="h6 mb-3">Aggiungi una fotografia</h3>
+              <h3 className="h6 mb-3">Aggiungi fotografie</h3>
 
               <div className="row g-3 align-items-end">
                 <div className="col-12 col-md">
                   <label htmlFor="vehicle-image" className="form-label">
-                    Scegli un file
+                    Scegli uno o più file
                   </label>
 
                   <input
@@ -631,15 +994,17 @@ function VehicleDetailsPage() {
                     type="file"
                     className="form-control"
                     accept="image/jpeg,image/png,image/webp"
+                    multiple
                     disabled={isUploading}
                     onChange={(event) => {
-                      setImageFile(event.target.files?.[0] ?? null);
+                      setImageFiles(Array.from(event.target.files ?? []));
                       setUploadError("");
                     }}
                   />
 
                   <div className="form-text">
-                    Formati accettati: JPG, PNG e WebP. Massimo 10 MB.
+                    JPG, PNG e WebP. Massimo 10 MB per fotografia e 10 foto
+                    complessive per veicolo.
                   </div>
                 </div>
 
@@ -647,7 +1012,7 @@ function VehicleDetailsPage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={!imageFile || isUploading}
+                    disabled={imageFiles.length === 0 || isUploading}
                   >
                     {isUploading ? (
                       <>
@@ -660,7 +1025,7 @@ function VehicleDetailsPage() {
                     ) : (
                       <>
                         <i className="bi bi-upload me-2" aria-hidden="true"></i>
-                        Carica foto
+                        Carica {imageFiles.length > 1 ? "foto" : "fotografia"}
                       </>
                     )}
                   </button>
@@ -991,77 +1356,256 @@ function VehicleDetailsPage() {
         </div>
       </div>
 
-      {/* Riepilogo dei dati collegati al veicolo. */}
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-md-4">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center gap-3">
-                <i
-                  className="bi bi-calendar-check fs-2 text-primary"
-                  aria-hidden="true"
-                ></i>
-
-                <div>
-                  <div className="text-secondary small">Noleggi registrati</div>
-
-                  <div className="fs-4 fw-semibold">
-                    {vehicle.rentals_count ?? 0}
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* Informazioni collegate: complete ma richiudibili. */}
+      <section
+        className="vehicle-records"
+        aria-labelledby="vehicle-records-title"
+      >
+        <div className="vehicle-section-heading">
+          <div>
+            <span className="page-eyebrow">Storico e gestione</span>
+            <h2 id="vehicle-records-title" className="h4 mb-1">
+              Informazioni collegate
+            </h2>
+            <p className="text-secondary mb-0">
+              Apri una sezione per consultare dati, date e importi precisi.
+            </p>
           </div>
         </div>
 
-        <div className="col-12 col-md-4">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center gap-3">
-                <i
-                  className="bi bi-receipt fs-2 text-danger"
-                  aria-hidden="true"
-                ></i>
+        {relatedDataError && (
+          <div className="alert alert-warning" role="alert">
+            {relatedDataError}
+          </div>
+        )}
 
-                <div>
-                  <div className="text-secondary small">Voci di spesa</div>
+        <div className="vehicle-records__list">
+          {/* Elenco completo delle spese e delle relative scadenze. */}
+          <details className="vehicle-record-section" open>
+            <summary>
+              <span className="vehicle-record-section__icon vehicle-record-section__icon--expenses">
+                <i className="bi bi-receipt" aria-hidden="true"></i>
+              </span>
 
-                  <div className="fs-4 fw-semibold">
-                    {vehicle.expenses_count ?? 0}
-                  </div>
+              <span className="vehicle-record-section__heading">
+                <strong>Spese e scadenze</strong>
+                <small>
+                  {expenses.length} {expenses.length === 1 ? "voce" : "voci"}
+                  {" · "}
+                  {formatCurrency(
+                    expenses.reduce(
+                      (total, expense) => total + Number(expense.amount ?? 0),
+                      0,
+                    ),
+                  )}
+                </small>
+              </span>
+
+              <i
+                className="bi bi-chevron-down vehicle-record-section__chevron"
+                aria-hidden="true"
+              ></i>
+            </summary>
+
+            <div className="vehicle-record-section__content">
+              {expenses.length > 0 ? (
+                <div className="vehicle-expense-list">
+                  {expenses.map((expense) => {
+                    const deadlineStatus = getDeadlineStatus(expense);
+
+                    return (
+                      <article key={expense.id} className="vehicle-expense-item">
+                        <div className="vehicle-expense-item__main">
+                          <span className="vehicle-record-label">
+                            {EXPENSE_CATEGORY_LABELS[expense.category] ??
+                              expense.category}
+                          </span>
+                          <h3>{expense.description}</h3>
+                          <p>
+                            {expense.supplier
+                              ? `Fornitore: ${expense.supplier}`
+                              : "Fornitore non indicato"}
+                          </p>
+                        </div>
+
+                        <div className="vehicle-expense-item__amount">
+                          <strong>{formatCurrency(expense.amount)}</strong>
+                          <span>{formatDate(expense.expense_date)}</span>
+                        </div>
+
+                        <div className="vehicle-expense-item__deadline">
+                          <span
+                            className={`vehicle-record-status ${deadlineStatus.className}`}
+                          >
+                            {deadlineStatus.label}
+                          </span>
+                          {expense.expires_on && (
+                            <small>
+                              Scadenza: {formatDate(expense.expires_on)}
+                            </small>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
+              ) : (
+                <p className="vehicle-record-empty">
+                  Non sono state registrate spese per questo veicolo.
+                </p>
+              )}
+            </div>
+          </details>
+
+          {/* Storico comprensibile di prenotazioni e noleggi. */}
+          <details className="vehicle-record-section">
+            <summary>
+              <span className="vehicle-record-section__icon vehicle-record-section__icon--rentals">
+                <i className="bi bi-calendar-check" aria-hidden="true"></i>
+              </span>
+
+              <span className="vehicle-record-section__heading">
+                <strong>Storico noleggi</strong>
+                <small>
+                  {rentals.length}{" "}
+                  {rentals.length === 1 ? "noleggio" : "noleggi"}
+                </small>
+              </span>
+
+              <i
+                className="bi bi-chevron-down vehicle-record-section__chevron"
+                aria-hidden="true"
+              ></i>
+            </summary>
+
+            <div className="vehicle-record-section__content">
+              {rentals.length > 0 ? (
+                <div className="vehicle-rental-list">
+                  {rentals.map((rental) => (
+                    <article key={rental.id} className="vehicle-rental-item">
+                      <div className="vehicle-rental-item__customer">
+                        <span
+                          className={`vehicle-rental-status vehicle-rental-status--${rental.status}`}
+                        >
+                          {RENTAL_STATUS_LABELS[rental.status] ?? rental.status}
+                        </span>
+                        <h3>{getCustomerName(rental)}</h3>
+                        <small>Noleggio #{rental.id}</small>
+                      </div>
+
+                      <dl className="vehicle-rental-item__details">
+                        <div>
+                          <dt>Inizio</dt>
+                          <dd>{formatDateTime(rental.starts_at)}</dd>
+                        </div>
+                        <div>
+                          <dt>Rientro previsto</dt>
+                          <dd>{formatDateTime(rental.expected_ends_at)}</dd>
+                        </div>
+                        <div>
+                          <dt>Totale</dt>
+                          <dd>{formatCurrency(rental.total_amount)}</dd>
+                        </div>
+                        <div>
+                          <dt>Saldo dovuto</dt>
+                          <dd>{formatCurrency(rental.balance_due)}</dd>
+                        </div>
+                      </dl>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="vehicle-record-empty">
+                  Non risultano noleggi associati a questo veicolo.
+                </p>
+              )}
+            </div>
+          </details>
+
+          {/* Posizione attuale e cronologia dei movimenti. */}
+          <details className="vehicle-record-section">
+            <summary>
+              <span className="vehicle-record-section__icon vehicle-record-section__icon--garage">
+                <i className="bi bi-p-square" aria-hidden="true"></i>
+              </span>
+
+              <span className="vehicle-record-section__heading">
+                <strong>Autorimessa</strong>
+                <small>
+                  {(vehicle.parking_spaces?.length ?? 0) > 0
+                    ? `${vehicle.parking_spaces.length} ${
+                        vehicle.parking_spaces.length === 1
+                          ? "cella occupata"
+                          : "celle occupate"
+                      }`
+                    : "Veicolo fuori autorimessa"}
+                </small>
+              </span>
+
+              <i
+                className="bi bi-chevron-down vehicle-record-section__chevron"
+                aria-hidden="true"
+              ></i>
+            </summary>
+
+            <div className="vehicle-record-section__content">
+              <div className="vehicle-garage-current">
+                <h3>Posizione attuale</h3>
+
+                {(vehicle.parking_spaces?.length ?? 0) > 0 ? (
+                  <div className="vehicle-garage-spaces">
+                    {vehicle.parking_spaces.map((space) => (
+                      <article key={space.id} className="vehicle-garage-space">
+                        <i className="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                        <div>
+                          <strong>{space.label}</strong>
+                          <span>
+                            Zona {space.zone} · fila {space.row_number} · colonna{" "}
+                            {space.column_number}
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="vehicle-record-empty">
+                    Il veicolo non occupa attualmente nessuna cella.
+                  </p>
+                )}
+              </div>
+
+              <div className="vehicle-garage-history">
+                <h3>Ultimi movimenti</h3>
+
+                {garageMovements.length > 0 ? (
+                  <div className="vehicle-garage-movements">
+                    {garageMovements.map((movement) => (
+                      <article
+                        key={movement.id}
+                        className="vehicle-garage-movement"
+                      >
+                        <span className="vehicle-garage-movement__marker"></span>
+                        <div>
+                          <strong>
+                            {GARAGE_MOVEMENT_LABELS[movement.type] ??
+                              movement.type.replaceAll("_", " ")}
+                          </strong>
+                          <span>{formatDateTime(movement.occurred_at)}</span>
+                          {movement.notes && <small>{movement.notes}</small>}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="vehicle-record-empty">
+                    Non risultano ancora movimenti registrati.
+                  </p>
+                )}
               </div>
             </div>
-          </div>
+          </details>
         </div>
-
-        <div className="col-12 col-md-4">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center gap-3">
-                <i
-                  className={`bi bi-p-square fs-2 ${
-                    vehicle.parking_spaces_count > 0
-                      ? "text-success"
-                      : "text-secondary"
-                  }`}
-                  aria-hidden="true"
-                ></i>
-
-                <div>
-                  <div className="text-secondary small">Autorimessa</div>
-
-                  <div className="fs-5 fw-semibold">
-                    {vehicle.parking_spaces_count > 0
-                      ? "Parcheggiato"
-                      : "Fuori autorimessa"}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
 
       {/* Operazione distruttiva mantenuta separata dalle azioni normali. */}
       <section

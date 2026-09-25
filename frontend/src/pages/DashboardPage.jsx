@@ -5,6 +5,19 @@ import createSlug from "../utils/createSlug";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
+// Traduce le categorie tecniche delle spese in etichette comprensibili.
+const EXPENSE_CATEGORY_LABELS = {
+  purchase: "Acquisto",
+  maintenance: "Manutenzione",
+  insurance: "Assicurazione",
+  road_tax: "Bollo",
+  inspection: "Revisione",
+  fuel: "Carburante",
+  cleaning: "Pulizia",
+  repair: "Riparazione",
+  other: "Altro",
+};
+
 // Formatta gli importi ricevuti dal backend.
 function formatCurrency(value) {
   return Number(value ?? 0).toLocaleString("it-IT", {
@@ -46,6 +59,29 @@ function normalizePercentage(value) {
   return Math.min(Math.max(Number(value ?? 0), 0), 100);
 }
 
+// Mostra valori decimali brevi, evitando numeri come 16,48 giorni.
+function formatNumber(value, maximumFractionDigits = 1) {
+  return Number(value ?? 0).toLocaleString("it-IT", {
+    maximumFractionDigits,
+  });
+}
+
+// Restituisce una frase chiara per una scadenza.
+function formatDeadlineDistance(daysRemaining) {
+  const days = Number(daysRemaining);
+
+  if (days < 0) {
+    const overdueDays = Math.abs(days);
+    return `Scaduta da ${overdueDays} ${overdueDays === 1 ? "giorno" : "giorni"}`;
+  }
+
+  if (days === 0) {
+    return "Scade oggi";
+  }
+
+  return `Scade tra ${days} ${days === 1 ? "giorno" : "giorni"}`;
+}
+
 // Scheda riutilizzabile per i dati principali.
 function DashboardMetricCard({
   icon,
@@ -74,6 +110,51 @@ function DashboardMetricCard({
         </div>
       </article>
     </div>
+  );
+}
+
+// Mostra una singola scadenza con veicolo, importo e data.
+function DashboardDeadlineCard({ deadline }) {
+  const vehicleSlug = createSlug(`${deadline.brand}-${deadline.model}`);
+
+  return (
+    <article
+      className={`dashboard-deadline-card dashboard-deadline-card--${deadline.status}`}
+    >
+      <div className="dashboard-deadline-card__top">
+        <div>
+          <span>
+            {EXPENSE_CATEGORY_LABELS[deadline.category] ?? deadline.category}
+          </span>
+          <strong>{deadline.description}</strong>
+        </div>
+
+        <strong>{formatCurrency(deadline.amount)}</strong>
+      </div>
+
+      <div className="dashboard-deadline-card__vehicle">
+        <i className="bi bi-car-front" aria-hidden="true"></i>
+        <span>
+          {deadline.brand} {deadline.model} · {deadline.license_plate}
+        </span>
+      </div>
+
+      <div className="dashboard-deadline-card__footer">
+        <div>
+          <strong>{formatDeadlineDistance(deadline.days_remaining)}</strong>
+          <span>{formatDate(deadline.expires_on)}</span>
+        </div>
+
+        {deadline.vehicle_id && (
+          <Link
+            to={`/vehicles/${deadline.vehicle_id}/${vehicleSlug}`}
+            aria-label={`Apri ${deadline.brand} ${deadline.model}`}
+          >
+            <i className="bi bi-arrow-right" aria-hidden="true"></i>
+          </Link>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -160,8 +241,22 @@ function DashboardPage() {
     dashboard.utilization.utilization_rate,
   );
 
-  // Il fallback mantiene compatibilità anche con risposte prive dell'elenco.
+  // I fallback mantengono compatibilità durante gli aggiornamenti dell'API.
   const activeRentals = dashboard.active_rentals ?? [];
+  const upcomingReservations = dashboard.upcoming_reservations?.items ?? [];
+  const upcomingReservationsTotal = dashboard.upcoming_reservations?.total ?? 0;
+  const recentExpenses = dashboard.financial.recent_expenses ?? [];
+  const expenseCategories = dashboard.financial.expenses_by_category ?? [];
+  const deadlines = dashboard.deadlines.items ?? [];
+  const upcomingDeadlines = deadlines.filter(
+    (deadline) => deadline.status === "upcoming",
+  );
+  const overdueDeadlines = deadlines.filter(
+    (deadline) => deadline.status === "overdue",
+  );
+  const projectedProfit = Number(dashboard.financial.projected_profit ?? 0);
+  const projectedResultLabel =
+    projectedProfit >= 0 ? "Utile previsto" : "Perdita prevista";
 
   return (
     <>
@@ -327,41 +422,121 @@ function DashboardPage() {
         )}
       </section>
 
+      {/* Prenotazioni future, indipendenti dal periodo economico. */}
+      <section
+        className="dashboard-upcoming-reservations"
+        aria-labelledby="upcoming-reservations-title"
+      >
+        <header className="dashboard-list-section__header">
+          <div>
+            <span className="dashboard-section-card__eyebrow">
+              Programmazione futura
+            </span>
+
+            <h2 id="upcoming-reservations-title" className="h5 mb-1">
+              Prossime prenotazioni
+            </h2>
+
+            <p className="text-secondary small mb-0">
+              Contratti prenotati che devono ancora iniziare.
+            </p>
+          </div>
+
+          <span className="dashboard-list-section__count">
+            {upcomingReservationsTotal}{" "}
+            {upcomingReservationsTotal === 1
+              ? "prenotazione futura"
+              : "prenotazioni future"}
+          </span>
+        </header>
+
+        {upcomingReservations.length > 0 ? (
+          <div className="dashboard-reservation-list">
+            {upcomingReservations.map((reservation) => {
+              const vehicleSlug = createSlug(
+                `${reservation.brand}-${reservation.model}`,
+              );
+
+              return (
+                <article
+                  key={reservation.rental_id}
+                  className="dashboard-reservation-row"
+                >
+                  <span className="dashboard-reservation-row__icon">
+                    <i className="bi bi-calendar2-check" aria-hidden="true"></i>
+                  </span>
+
+                  <div className="dashboard-reservation-row__vehicle">
+                    <strong>
+                      {reservation.brand} {reservation.model}
+                    </strong>
+                    <span>{reservation.license_plate}</span>
+                  </div>
+
+                  <div className="dashboard-reservation-row__detail">
+                    <span>Cliente</span>
+                    <strong>
+                      {reservation.customer_name ?? "Non disponibile"}
+                    </strong>
+                  </div>
+
+                  <div className="dashboard-reservation-row__detail">
+                    <span>Periodo prenotato</span>
+                    <strong>
+                      {formatDateTime(reservation.starts_at)} –{" "}
+                      {formatDateTime(reservation.expected_ends_at)}
+                    </strong>
+                  </div>
+
+                  <Link
+                    to={`/vehicles/${reservation.vehicle_id}/${vehicleSlug}`}
+                    className="btn btn-sm btn-outline-primary"
+                  >
+                    Apri veicolo
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="dashboard-list-section__empty">
+            <i className="bi bi-calendar2" aria-hidden="true"></i>
+            <span>Non ci sono prenotazioni future.</span>
+          </div>
+        )}
+      </section>
+
       {/* Dati principali. */}
       <div className="row g-3 mb-4">
         <DashboardMetricCard
-          icon="bi-car-front-fill"
-          label="Veicoli totali"
-          value={dashboard.fleet.total}
-          supportingText={`${dashboard.fleet.active} attivi`}
-        />
-
-        <DashboardMetricCard
           icon="bi-check2-circle"
-          label="Disponibili"
+          label="Disponibili ora"
           value={dashboard.fleet.available_for_rental}
-          supportingText={`${dashboard.fleet.rented_now} attualmente noleggiati`}
+          supportingText={`${dashboard.fleet.available_for_rental} su ${dashboard.fleet.active} mezzi attivi`}
           tone="success"
         />
 
         <DashboardMetricCard
-          icon="bi-calendar-check"
-          label="Noleggi attivi"
-          value={dashboard.rentals.active}
-          supportingText={`${dashboard.rentals.reserved} prenotazioni`}
+          icon="bi-key-fill"
+          label="Noleggiati ora"
+          value={dashboard.fleet.rented_now}
+          supportingText="Mezzi consegnati e non rientrati"
           tone="warm"
         />
 
         <DashboardMetricCard
-          icon="bi-graph-up-arrow"
-          label="Utile previsto"
-          value={formatCurrency(dashboard.financial.projected_profit)}
-          supportingText={`${formatCurrency(
-            dashboard.financial.contracted_revenue,
-          )} di contratti`}
-          tone={
-            dashboard.financial.projected_profit >= 0 ? "primary" : "danger"
-          }
+          icon="bi-calendar2-check-fill"
+          label="Prossime prenotazioni"
+          value={upcomingReservationsTotal}
+          supportingText={`${dashboard.rentals.reserved} nel periodo selezionato`}
+          tone="primary"
+        />
+
+        <DashboardMetricCard
+          icon="bi-car-front-fill"
+          label="Mezzi attivi"
+          value={dashboard.fleet.active}
+          supportingText={`${dashboard.fleet.total} totali · ${dashboard.fleet.inactive} fuori servizio`}
         />
       </div>
 
@@ -459,21 +634,23 @@ function DashboardPage() {
 
               <div>
                 <span>Giorni noleggiati</span>
-                <strong>{dashboard.utilization.rented_days}</strong>
+                <strong>
+                  {formatNumber(dashboard.utilization.rented_days)}
+                </strong>
               </div>
 
               <div>
                 <span>Giorni di giacenza</span>
-                <strong>{dashboard.utilization.idle_days}</strong>
+                <strong>{formatNumber(dashboard.utilization.idle_days)}</strong>
               </div>
             </div>
           </section>
         </div>
       </div>
 
-      <div className="row g-4">
+      <div className="row g-4 align-items-start">
         {/* Riepilogo economico. */}
-        <div className="col-12 col-lg-7">
+        <div className="col-12 col-lg-5">
           <section className="dashboard-section-card">
             <div className="dashboard-section-card__header">
               <div>
@@ -490,7 +667,31 @@ function DashboardPage() {
               ></i>
             </div>
 
+            <div
+              className={`dashboard-financial-result ${
+                projectedProfit >= 0
+                  ? "dashboard-financial-result--positive"
+                  : "dashboard-financial-result--negative"
+              }`}
+            >
+              <div>
+                <span>{projectedResultLabel}</span>
+                <small>
+                  Ricavi dei contratti meno spese del periodo selezionato
+                </small>
+              </div>
+
+              <strong>{formatCurrency(Math.abs(projectedProfit))}</strong>
+            </div>
+
             <div className="dashboard-financial-list">
+              <div>
+                <span>Valore dei contratti</span>
+                <strong>
+                  {formatCurrency(dashboard.financial.contracted_revenue)}
+                </strong>
+              </div>
+
               <div>
                 <span>Importo incassato</span>
                 <strong className="text-success">
@@ -522,8 +723,57 @@ function DashboardPage() {
           </section>
         </div>
 
+        {/* Suddivisione delle spese per categoria. */}
+        <div className="col-12 col-lg-7">
+          <section className="dashboard-section-card">
+            <div className="dashboard-section-card__header">
+              <div>
+                <span className="dashboard-section-card__eyebrow">
+                  Dettaglio dei costi
+                </span>
+
+                <h2 className="h5 mb-0">Suddivisione spese</h2>
+              </div>
+
+              <i
+                className="bi bi-pie-chart dashboard-section-icon"
+                aria-hidden="true"
+              ></i>
+            </div>
+
+            <div className="dashboard-expense-breakdown dashboard-expense-breakdown--standalone">
+              {expenseCategories.length > 0 ? (
+                <div className="dashboard-expense-breakdown__list">
+                  {expenseCategories.map((category) => (
+                    <div key={category.category}>
+                      <div>
+                        <strong>
+                          {EXPENSE_CATEGORY_LABELS[category.category] ??
+                            category.category}
+                        </strong>
+                        <span>
+                          {category.count}{" "}
+                          {category.count === 1
+                            ? "spesa registrata"
+                            : "spese registrate"}
+                        </span>
+                      </div>
+
+                      <strong>{formatCurrency(category.total)}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-secondary small mb-0">
+                  Nessuna spesa registrata nel periodo selezionato.
+                </p>
+              )}
+            </div>
+          </section>
+        </div>
+
         {/* Scadenze operative. */}
-        <div className="col-12 col-lg-5">
+        <div className="col-12">
           <section className="dashboard-section-card">
             <div className="dashboard-section-card__header">
               <div>
@@ -562,9 +812,148 @@ function DashboardPage() {
                 <strong>{dashboard.deadlines.upcoming_30_days_count}</strong>
               </div>
             </div>
+
+            <div className="dashboard-deadline-columns">
+              {upcomingDeadlines.length > 0 && (
+                <div className="dashboard-deadline-group">
+                  <div className="dashboard-deadline-group__header">
+                    <div>
+                      <i className="bi bi-clock" aria-hidden="true"></i>
+                      <strong>In scadenza</strong>
+                    </div>
+                    <span>{upcomingDeadlines.length}</span>
+                  </div>
+
+                  <p className="dashboard-deadline-group__description">
+                    Da gestire entro 30 giorni, in ordine di urgenza.
+                  </p>
+
+                  <div className="dashboard-deadline-list">
+                    {upcomingDeadlines.map((deadline) => (
+                      <DashboardDeadlineCard
+                        key={deadline.expense_id}
+                        deadline={deadline}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {overdueDeadlines.length > 0 && (
+                <div className="dashboard-deadline-group dashboard-deadline-group--overdue">
+                  <div className="dashboard-deadline-group__header">
+                    <div>
+                      <i
+                        className="bi bi-exclamation-triangle"
+                        aria-hidden="true"
+                      ></i>
+                      <strong>Già scadute</strong>
+                    </div>
+                    <span>{overdueDeadlines.length}</span>
+                  </div>
+
+                  <p className="dashboard-deadline-group__description">
+                    Scadenze superate che richiedono un controllo.
+                  </p>
+
+                  <div className="dashboard-deadline-list">
+                    {overdueDeadlines.map((deadline) => (
+                      <DashboardDeadlineCard
+                        key={deadline.expense_id}
+                        deadline={deadline}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {deadlines.length === 0 && (
+              <div className="dashboard-list-section__empty dashboard-list-section__empty--compact">
+                <i className="bi bi-check-circle" aria-hidden="true"></i>
+                <span>Nessuna scadenza urgente.</span>
+              </div>
+            )}
           </section>
         </div>
       </div>
+
+      {/* Spese più recenti comprese nel periodo selezionato. */}
+      <section className="dashboard-recent-expenses">
+        <header className="dashboard-list-section__header">
+          <div>
+            <span className="dashboard-section-card__eyebrow">
+              Dettaglio dei costi
+            </span>
+
+            <h2 className="h5 mb-1">Ultime spese del periodo</h2>
+
+            <p className="text-secondary small mb-0">
+              Costi più recenti con veicolo, data e importo.
+            </p>
+          </div>
+        </header>
+
+        {recentExpenses.length > 0 ? (
+          <div className="dashboard-expense-list">
+            {recentExpenses.map((expense) => {
+              const vehicleSlug = createSlug(
+                `${expense.brand}-${expense.model}`,
+              );
+
+              return (
+                <article
+                  key={expense.expense_id}
+                  className="dashboard-expense-row"
+                >
+                  <span className="dashboard-expense-row__icon">
+                    <i className="bi bi-receipt" aria-hidden="true"></i>
+                  </span>
+
+                  <div className="dashboard-expense-row__description">
+                    <strong>{expense.description}</strong>
+                    <span>
+                      {EXPENSE_CATEGORY_LABELS[expense.category] ??
+                        expense.category}
+                    </span>
+                  </div>
+
+                  <div className="dashboard-expense-row__vehicle">
+                    <span>Veicolo</span>
+                    <strong>
+                      {expense.brand} {expense.model} · {expense.license_plate}
+                    </strong>
+                  </div>
+
+                  <div className="dashboard-expense-row__date">
+                    <span>Registrata il</span>
+                    <strong>{formatDate(expense.expense_date)}</strong>
+                  </div>
+
+                  <strong className="dashboard-expense-row__amount">
+                    {formatCurrency(expense.amount)}
+                  </strong>
+
+                  {expense.vehicle_id && (
+                    <Link
+                      to={`/vehicles/${expense.vehicle_id}/${vehicleSlug}`}
+                      className="dashboard-expense-row__link"
+                      aria-label={`Apri ${expense.brand} ${expense.model}`}
+                    >
+                      <i className="bi bi-arrow-right" aria-hidden="true"></i>
+                    </Link>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="dashboard-list-section__empty">
+            <i className="bi bi-receipt" aria-hidden="true"></i>
+            <span>Nessuna spesa registrata nel periodo.</span>
+          </div>
+        )}
+      </section>
     </>
   );
 }
