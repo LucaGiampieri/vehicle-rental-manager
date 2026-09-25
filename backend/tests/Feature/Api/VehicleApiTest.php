@@ -674,6 +674,52 @@ class VehicleApiTest extends TestCase
         );
     }
 
+    // Il dettaglio restituisce le celle attualmente occupate dal veicolo.
+    public function test_vehicle_detail_includes_current_parking_spaces(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create([
+            'parking_units' => 2,
+        ]);
+
+        $firstSpace = ParkingSpace::factory()->create([
+            'vehicle_id' => $vehicle->id,
+        ]);
+
+        $secondSpace = ParkingSpace::factory()->create([
+            'vehicle_id' => $vehicle->id,
+        ]);
+
+        $response = $this->getJson(
+            "/api/vehicles/{$vehicle->id}"
+        );
+
+        $response->assertOk();
+
+        // Verifica che siano restituite entrambe le celle.
+        $response->assertJsonCount(
+            2,
+            'data.parking_spaces'
+        );
+
+        // Verifica le informazioni della prima cella.
+        $response->assertJsonFragment([
+            'id' => $firstSpace->id,
+            'label' => $firstSpace->label,
+            'vehicle_id' => $vehicle->id,
+            'is_occupied' => true,
+        ]);
+
+        // Verifica le informazioni della seconda cella.
+        $response->assertJsonFragment([
+            'id' => $secondSpace->id,
+            'label' => $secondSpace->label,
+            'vehicle_id' => $vehicle->id,
+            'is_occupied' => true,
+        ]);
+    }
+
     // Crea e autentica un utente fittizio
     private function authenticateUser(): void
     {

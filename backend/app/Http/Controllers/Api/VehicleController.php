@@ -38,6 +38,7 @@ class VehicleController extends Controller
     private const DETAIL_RELATIONS = [
         'primaryImage',
         'images',
+        'parkingSpaces',
         'activeRental.customer',
         'nextReservation.customer',
     ];

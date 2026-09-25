@@ -59,6 +59,7 @@ class DashboardService
 
         // Recupera le spese sostenute nel periodo selezionato.
         $periodExpenses = Expense::query()
+            ->with('vehicle')
             ->when(
                 $vehicleId !== null,
                 fn ($query) => $query->where('vehicle_id', $vehicleId)
@@ -132,8 +133,18 @@ class DashboardService
                     $amountCollected - $totalExpenses
                 ),
                 'expenses_by_category' => $expenseBreakdown,
+
+                // Ultime spese del periodo con il veicolo interessato.
+                'recent_expenses' => $this->recentExpenseSummary(
+                    $periodExpenses
+                ),
             ],
             'rentals' => $this->rentalSummary($periodRentals),
+
+            // Prenotazioni future, indipendenti dal periodo selezionato.
+            'upcoming_reservations' => $this->upcomingReservationSummary(
+                $vehicleId
+            ),
 
             // Elenca i noleggi attualmente in corso con mezzo e cliente
             'active_rentals' => $this->activeRentalSummary(
@@ -238,6 +249,101 @@ class DashboardService
                     ),
                 ];
             })
+            ->values()
+            ->all();
+    }
+
+    // Elenca le prossime prenotazioni non ancora iniziate.
+    private function upcomingReservationSummary(
+        ?int $vehicleId
+    ): array {
+        $reservations = Rental::query()
+            ->with([
+                'vehicle',
+                'customer',
+            ])
+            ->when(
+                $vehicleId !== null,
+                fn ($query) => $query->where(
+                    'vehicle_id',
+                    $vehicleId
+                )
+            )
+            ->where('status', Rental::STATUS_RESERVED)
+            ->where('starts_at', '>=', now())
+            ->orderBy('starts_at')
+            ->get();
+
+        return [
+            'total' => $reservations->count(),
+            'items' => $reservations
+                ->take(10)
+                ->map(function (Rental $rental): array {
+                    $customerName = trim(
+                        ($rental->customer?->first_name ?? '')
+                        .' '
+                        .($rental->customer?->last_name ?? '')
+                    );
+
+                    return [
+                        'rental_id' => $rental->id,
+                        'vehicle_id' => $rental->vehicle_id,
+                        'license_plate' => $rental
+                            ->vehicle
+                            ?->license_plate,
+                        'brand' => $rental->vehicle?->brand,
+                        'model' => $rental->vehicle?->model,
+                        'customer_id' => $rental->customer_id,
+                        'customer_name' => $customerName !== ''
+                            ? $customerName
+                            : null,
+                        'starts_at' => $rental
+                            ->starts_at
+                            ?->toISOString(),
+                        'expected_ends_at' => $rental
+                            ->expected_ends_at
+                            ?->toISOString(),
+                        'total_amount' => $this->money(
+                            $rental->total_amount
+                        ),
+                        'amount_paid' => $this->money(
+                            $rental->amount_paid
+                        ),
+                    ];
+                })
+                ->values()
+                ->all(),
+        ];
+    }
+
+    // Restituisce le spese più recenti comprese nel periodo selezionato.
+    private function recentExpenseSummary($expenses): array
+    {
+        return $expenses
+            ->sortByDesc(
+                fn (Expense $expense) => sprintf(
+                    '%s-%010d',
+                    $expense->expense_date->format('Y-m-d'),
+                    $expense->id
+                )
+            )
+            ->take(8)
+            ->map(fn (Expense $expense): array => [
+                'expense_id' => $expense->id,
+                'vehicle_id' => $expense->vehicle_id,
+                'license_plate' => $expense->vehicle?->license_plate,
+                'brand' => $expense->vehicle?->brand,
+                'model' => $expense->vehicle?->model,
+                'category' => $expense->category,
+                'description' => $expense->description,
+                'amount' => $this->money($expense->amount),
+                'expense_date' => $expense
+                    ->expense_date
+                    ->toDateString(),
+                'expires_on' => $expense
+                    ->expires_on
+                    ?->toDateString(),
+            ])
             ->values()
             ->all();
     }
@@ -429,8 +535,11 @@ class DashboardService
                     'expense_id' => $expense->id,
                     'vehicle_id' => $expense->vehicle_id,
                     'license_plate' => $expense->vehicle?->license_plate,
+                    'brand' => $expense->vehicle?->brand,
+                    'model' => $expense->vehicle?->model,
                     'category' => $expense->category,
                     'description' => $expense->description,
+                    'amount' => $this->money($expense->amount),
                     'expires_on' => $expense->expires_on->toDateString(),
                     'days_remaining' => $daysRemaining,
                     'status' => $daysRemaining < 0

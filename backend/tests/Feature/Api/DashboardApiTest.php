@@ -111,8 +111,13 @@ class DashboardApiTest extends TestCase
                     'realized_profit',
                     'cash_balance',
                     'expenses_by_category',
+                    'recent_expenses',
                 ],
                 'rentals',
+                'upcoming_reservations' => [
+                    'total',
+                    'items',
+                ],
                 'active_rentals',
                 'fleet',
                 'garage',
@@ -264,6 +269,15 @@ class DashboardApiTest extends TestCase
         $response->assertJsonPath(
             'data.financial.expenses_by_category.1.total',
             100
+        );
+
+        $response->assertJsonPath(
+            'data.financial.recent_expenses.0.description',
+            'Carburante'
+        );
+        $response->assertJsonPath(
+            'data.financial.recent_expenses.0.amount',
+            50
         );
     }
 
@@ -524,8 +538,152 @@ class DashboardApiTest extends TestCase
             '2026-09-10'
         );
         $response->assertJsonPath(
+            'data.deadlines.items.0.brand',
+            $vehicle->brand
+        );
+        $response->assertJsonPath(
+            'data.deadlines.items.0.model',
+            $vehicle->model
+        );
+        $response->assertJsonPath(
+            'data.deadlines.items.0.amount',
+            100
+        );
+        $response->assertJsonPath(
             'data.deadlines.items.1.status',
             'upcoming'
+        );
+    }
+
+    // Le prossime prenotazioni non dipendono dal periodo economico scelto.
+    public function test_dashboard_lists_upcoming_reservations(): void
+    {
+        $this->travelTo(
+            Carbon::parse('2026-09-11 12:00:00')
+        );
+
+        $this->authenticateUser();
+
+        $customer = Customer::factory()->create([
+            'first_name' => 'Giulia',
+            'last_name' => 'Bianchi',
+        ]);
+
+        $vehicle = Vehicle::factory()->create([
+            'license_plate' => 'BOOK-001',
+            'brand' => 'Ford',
+            'model' => 'Transit',
+        ]);
+
+        // Cade fuori dal periodo richiesto, ma deve comparire tra le future.
+        $this->createRental($vehicle, [
+            'customer_id' => $customer->id,
+            'status' => Rental::STATUS_RESERVED,
+            'starts_at' => Carbon::parse('2026-11-10 10:00:00'),
+            'expected_ends_at' => Carbon::parse('2026-11-12 10:00:00'),
+            'actual_starts_at' => null,
+            'actual_ends_at' => null,
+            'start_mileage' => null,
+            'end_mileage' => null,
+            'total_amount' => 300,
+            'amount_paid' => 100,
+        ]);
+
+        // Una vecchia prenotazione non deve essere considerata futura.
+        $this->createRental($vehicle, [
+            'status' => Rental::STATUS_RESERVED,
+            'starts_at' => Carbon::parse('2026-09-01 10:00:00'),
+            'expected_ends_at' => Carbon::parse('2026-09-03 10:00:00'),
+            'actual_starts_at' => null,
+            'actual_ends_at' => null,
+            'start_mileage' => null,
+            'end_mileage' => null,
+        ]);
+
+        $response = $this->getJson(
+            '/api/dashboard'
+            .'?date_from=2026-09-01'
+            .'&date_to=2026-09-30'
+        );
+
+        $response->assertOk();
+        $response->assertJsonPath(
+            'data.rentals.reserved',
+            1
+        );
+        $response->assertJsonPath(
+            'data.upcoming_reservations.total',
+            1
+        );
+        $response->assertJsonCount(
+            1,
+            'data.upcoming_reservations.items'
+        );
+        $response->assertJsonPath(
+            'data.upcoming_reservations.items.0.license_plate',
+            'BOOK-001'
+        );
+        $response->assertJsonPath(
+            'data.upcoming_reservations.items.0.customer_name',
+            'Giulia Bianchi'
+        );
+        $response->assertJsonPath(
+            'data.upcoming_reservations.items.0.total_amount',
+            300
+        );
+    }
+
+    // Elenca le spese recenti del periodo con il veicolo associato.
+    public function test_dashboard_lists_recent_expenses(): void
+    {
+        $this->authenticateUser();
+
+        $vehicle = Vehicle::factory()->create([
+            'license_plate' => 'COST-001',
+            'brand' => 'Fiat',
+            'model' => 'Panda',
+        ]);
+
+        $this->createExpense($vehicle, [
+            'category' => Expense::CATEGORY_INSURANCE,
+            'description' => 'Rinnovo assicurazione',
+            'amount' => 650,
+            'expense_date' => '2026-09-20',
+            'expires_on' => '2027-09-20',
+        ]);
+
+        $this->createExpense($vehicle, [
+            'description' => 'Spesa precedente',
+            'amount' => 120,
+            'expense_date' => '2026-09-05',
+        ]);
+
+        $response = $this->getJson(
+            '/api/dashboard'
+            .'?date_from=2026-09-01'
+            .'&date_to=2026-09-30'
+        );
+
+        $response->assertOk();
+        $response->assertJsonCount(
+            2,
+            'data.financial.recent_expenses'
+        );
+        $response->assertJsonPath(
+            'data.financial.recent_expenses.0.description',
+            'Rinnovo assicurazione'
+        );
+        $response->assertJsonPath(
+            'data.financial.recent_expenses.0.license_plate',
+            'COST-001'
+        );
+        $response->assertJsonPath(
+            'data.financial.recent_expenses.0.brand',
+            'Fiat'
+        );
+        $response->assertJsonPath(
+            'data.financial.recent_expenses.0.amount',
+            650
         );
     }
 

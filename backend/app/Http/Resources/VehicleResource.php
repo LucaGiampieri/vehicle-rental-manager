@@ -72,6 +72,12 @@ class VehicleResource extends JsonResource
             'expenses_count' => $this->whenCounted('expenses'),
             'parking_spaces_count' => $this->whenCounted('parkingSpaces'),
 
+            // Celle attualmente occupate dal veicolo.
+            // Sono incluse soltanto nella pagina di dettaglio.
+            'parking_spaces' => ParkingSpaceResource::collection(
+                $this->whenLoaded('parkingSpaces')
+            ),
+
             // Date di creazione e ultima modifica
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
