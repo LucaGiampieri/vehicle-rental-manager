@@ -10,20 +10,19 @@ use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class DemoDataSeeder extends Seeder
 {
-    /**
-     * Inserisce un insieme coerente di dati dimostrativi.
-     */
+    /** Inserisce dati dimostrativi realistici e ripetibili. */
     public function run(): void
     {
         DB::transaction(function (): void {
             $today = now()->startOfDay();
 
-            // Crea l'utente con cui provare l'applicazione.
+            // Crea l'account demo senza modificare gli altri utenti.
             $user = User::updateOrCreate(
                 ['email' => 'admin@example.com'],
                 [
@@ -32,330 +31,347 @@ class DemoDataSeeder extends Seeder
                 ]
             );
 
-            // Crea quattro mezzi con dimensioni e situazioni differenti.
-            $panda = Vehicle::updateOrCreate(
-                ['license_plate' => 'DEMO-001'],
-                [
-                    'brand' => 'Fiat',
-                    'model' => 'Panda',
-                    'type' => 'car',
-                    'parking_units' => 1,
-                    'year' => 2022,
-                    'mileage' => 38500,
-                    'daily_rate' => 50,
-                    'is_active' => true,
-                ]
-            );
+            $vehicles = $this->createVehicles();
 
-            $transit = Vehicle::updateOrCreate(
-                ['license_plate' => 'DEMO-002'],
-                [
-                    'brand' => 'Ford',
-                    'model' => 'Transit',
-                    'type' => 'van',
-                    'parking_units' => 2,
-                    'year' => 2021,
-                    'mileage' => 72000,
-                    'daily_rate' => 90,
-                    'is_active' => true,
-                ]
-            );
-
-            $ducato = Vehicle::updateOrCreate(
-                ['license_plate' => 'DEMO-003'],
-                [
-                    'brand' => 'Fiat',
-                    'model' => 'Ducato Camper',
-                    'type' => 'camper',
-                    'parking_units' => 4,
-                    'year' => 2023,
-                    'mileage' => 22000,
-                    'daily_rate' => 140,
-                    'is_active' => true,
-                ]
-            );
-
-            $inactiveVehicle = Vehicle::updateOrCreate(
-                ['license_plate' => 'DEMO-004'],
-                [
-                    'brand' => 'Volkswagen',
-                    'model' => 'Golf',
-                    'type' => 'car',
-                    'parking_units' => 1,
-                    'year' => 2018,
-                    'mileage' => 128000,
-                    'daily_rate' => 45,
-                    'is_active' => false,
-                ]
-            );
-
-            $vehicles = collect([
-                $panda,
-                $transit,
-                $ducato,
-                $inactiveVehicle,
-            ]);
-
-            /*
-             * Elimina solamente i dati operativi appartenenti ai mezzi demo.
-             * Questo rende il Seeder riutilizzabile senza creare duplicati.
-             */
+            // Elimina solo i dati operativi dei mezzi demo.
             ParkingMovement::query()
                 ->whereIn('vehicle_id', $vehicles->pluck('id'))
                 ->delete();
-
             Rental::query()
                 ->whereIn('vehicle_id', $vehicles->pluck('id'))
                 ->delete();
-
             Expense::query()
                 ->whereIn('vehicle_id', $vehicles->pluck('id'))
                 ->delete();
 
-            // Crea tre clienti dimostrativi con patente valida.
-            $luca = Customer::updateOrCreate(
-                ['driving_license_number' => 'DEMO-LIC-001'],
-                [
-                    'first_name' => 'Luca',
-                    'last_name' => 'Rossi',
-                    'birth_date' => '1992-04-15',
-                    'email' => 'luca.rossi@example.com',
-                    'phone' => '3331112233',
-                    'tax_code' => 'DEMO-RSSLCU92D15',
-                    'driving_license_expiry_date' => $today
-                        ->copy()
-                        ->addYears(5),
-                    'address' => 'Via Roma 10, Pesaro',
-                    'notes' => 'Cliente dimostrativo abituale.',
-                    'is_active' => true,
-                ]
+            $customers = $this->createCustomers($today);
+            $spaces = $this->createParkingSpaces();
+
+            ParkingSpace::query()
+                ->where('zone', 'main')
+                ->update(['vehicle_id' => null]);
+
+            $activeRentals = $this->createRentals(
+                $vehicles,
+                $customers,
+                $today
             );
 
-            $anna = Customer::updateOrCreate(
-                ['driving_license_number' => 'DEMO-LIC-002'],
-                [
-                    'first_name' => 'Anna',
-                    'last_name' => 'Bianchi',
-                    'birth_date' => '1987-09-08',
-                    'email' => 'anna.bianchi@example.com',
-                    'phone' => '3332223344',
-                    'tax_code' => 'DEMO-BNCNNA87P48',
-                    'driving_license_expiry_date' => $today
-                        ->copy()
-                        ->addYears(4),
-                    'address' => 'Corso Italia 25, Fano',
-                    'notes' => null,
-                    'is_active' => true,
-                ]
+            $this->createExpenses($vehicles, $today);
+            $this->parkVehicles($vehicles, $spaces);
+            $this->createMovements(
+                $vehicles,
+                $spaces,
+                $activeRentals,
+                $user,
+                $today
             );
+        });
+    }
 
-            $marco = Customer::updateOrCreate(
-                ['driving_license_number' => 'DEMO-LIC-003'],
+    /** @return Collection<int, Vehicle> */
+    private function createVehicles(): Collection
+    {
+        // Marca, modello, tipo, celle, anno, km, tariffa, attivo.
+        $fleet = [
+            ['Fiat', 'Panda', Vehicle::TYPE_CAR, 1, 2022, 38500, 50, true],
+            ['Ford', 'Transit', Vehicle::TYPE_VAN, 2, 2021, 72000, 90, true],
+            ['Fiat', 'Ducato Camper', Vehicle::TYPE_CAMPER, 4, 2023, 22000, 140, true],
+            ['Volkswagen', 'Golf', Vehicle::TYPE_CAR, 1, 2018, 128000, 45, false],
+            ['Toyota', 'Corolla', Vehicle::TYPE_CAR, 1, 2022, 46000, 58, true],
+            ['Yamaha', 'MT-07', Vehicle::TYPE_MOTORCYCLE, 1, 2023, 12500, 42, true],
+            ['Mercedes-Benz', 'Sprinter', Vehicle::TYPE_VAN, 2, 2022, 61000, 105, true],
+            ['Tesla', 'Model 3', Vehicle::TYPE_CAR, 1, 2024, 18000, 95, true],
+            ['Iveco', 'Daily', Vehicle::TYPE_TRUCK, 4, 2020, 89000, 125, true],
+            ['Setra', 'ComfortClass', Vehicle::TYPE_BUS, 8, 2019, 145000, 240, true],
+            ['Renault', 'Captur', Vehicle::TYPE_CAR, 1, 2021, 52000, 62, true],
+            ['BMW', 'X1', Vehicle::TYPE_CAR, 1, 2019, 97000, 78, false],
+            ['Honda', 'SH 125', Vehicle::TYPE_MOTORCYCLE, 1, 2022, 21000, 32, true],
+            ['Volkswagen', 'California', Vehicle::TYPE_CAMPER, 4, 2022, 35000, 165, true],
+            ['Peugeot', '208', Vehicle::TYPE_CAR, 1, 2023, 27000, 55, true],
+            ['Citroen', 'Berlingo', Vehicle::TYPE_VAN, 2, 2021, 68000, 82, true],
+            ['Ford', 'Puma', Vehicle::TYPE_CAR, 1, 2022, 41000, 68, true],
+            ['Renault', 'Master', Vehicle::TYPE_VAN, 2, 2020, 104000, 98, true],
+            ['Ducati', 'Multistrada', Vehicle::TYPE_MOTORCYCLE, 1, 2021, 28500, 75, true],
+            ['Audi', 'A3', Vehicle::TYPE_CAR, 1, 2020, 76000, 80, true],
+            ['Opel', 'Corsa', Vehicle::TYPE_CAR, 1, 2023, 24000, 52, true],
+            ['Mercedes-Benz', 'Vito', Vehicle::TYPE_VAN, 2, 2022, 57000, 110, true],
+            ['Piaggio', 'Beverly 300', Vehicle::TYPE_MOTORCYCLE, 1, 2024, 9000, 38, true],
+            ['Toyota', 'Proace', Vehicle::TYPE_VAN, 2, 2023, 33000, 100, true],
+            ['Hyundai', 'Tucson', Vehicle::TYPE_CAR, 1, 2022, 44000, 76, true],
+            ['Nissan', 'Qashqai', Vehicle::TYPE_CAR, 1, 2021, 59000, 72, true],
+            ['Knaus', 'Boxstar', Vehicle::TYPE_CAMPER, 4, 2024, 12000, 180, true],
+            ['Scania', 'Touring', Vehicle::TYPE_BUS, 8, 2018, 210000, 260, false],
+            ['MAN', 'TGE', Vehicle::TYPE_TRUCK, 4, 2021, 83000, 135, true],
+            ['Jeep', 'Renegade', Vehicle::TYPE_CAR, 1, 2022, 48000, 74, true],
+        ];
+
+        return collect($fleet)->map(
+            fn (array $data, int $index): Vehicle => Vehicle::updateOrCreate(
+                ['license_plate' => sprintf('DEMO-%03d', $index + 1)],
                 [
-                    'first_name' => 'Marco',
-                    'last_name' => 'Verdi',
-                    'birth_date' => '1979-12-20',
-                    'email' => 'marco.verdi@example.com',
-                    'phone' => '3334445566',
-                    'tax_code' => 'DEMO-VRDMRC79T20',
-                    'driving_license_expiry_date' => $today
-                        ->copy()
-                        ->addYears(3),
-                    'address' => 'Via Adriatica 8, Senigallia',
-                    'notes' => null,
-                    'is_active' => true,
+                    'brand' => $data[0],
+                    'model' => $data[1],
+                    'type' => $data[2],
+                    'parking_units' => $data[3],
+                    'year' => $data[4],
+                    'mileage' => $data[5],
+                    'daily_rate' => $data[6],
+                    'is_active' => $data[7],
                 ]
-            );
+            )
+        )->values();
+    }
 
-            // Crea una griglia principale di 4 righe per 6 colonne.
-            $spaces = collect();
+    /** @return Collection<int, Customer> */
+    private function createCustomers($today): Collection
+    {
+        $people = [
+            ['Luca', 'Rossi', 'Pesaro'], ['Anna', 'Bianchi', 'Fano'],
+            ['Marco', 'Verdi', 'Senigallia'], ['Sofia', 'Romano', 'Ancona'],
+            ['Davide', 'Marini', 'Rimini'], ['Elena', 'Conti', 'Urbino'],
+            ['Giulia', 'Ricci', 'Cattolica'], ['Matteo', 'Moretti', 'Jesi'],
+            ['Chiara', 'Ferrari', 'Cesenatico'], ['Andrea', 'Esposito', 'Civitanova Marche'],
+            ['Francesca', 'Gallo', 'Pesaro'], ['Simone', 'Costa', 'Fano'],
+            ['Martina', 'Greco', 'Rimini'], ['Alessandro', 'Mancini', 'Ancona'],
+            ['Valentina', 'Lombardi', 'Senigallia'],
+        ];
 
-            for ($row = 1; $row <= 4; $row++) {
-                for ($column = 1; $column <= 6; $column++) {
-                    $space = ParkingSpace::updateOrCreate(
-                        [
-                            'zone' => 'main',
-                            'row_number' => $row,
-                            'column_number' => $column,
-                        ],
-                        [
-                            'label' => "M-{$row}-{$column}",
-                            'vehicle_id' => null,
-                            'is_active' => ! ($row === 4 && $column === 6),
-                            'notes' => $row === 4 && $column === 6
-                                ? 'Cella temporaneamente non utilizzabile.'
-                                : null,
-                        ]
-                    );
+        return collect($people)->map(
+            function (array $person, int $index) use ($today): Customer {
+                $number = $index + 1;
 
-                    $spaces->put("{$row}-{$column}", $space);
-                }
+                return Customer::updateOrCreate(
+                    ['driving_license_number' => sprintf('DEMO-LIC-%03d', $number)],
+                    [
+                        'first_name' => $person[0],
+                        'last_name' => $person[1],
+                        'birth_date' => $today->copy()->subYears(24 + $number),
+                        'email' => "demo.cliente{$number}@example.com",
+                        'phone' => sprintf('333%07d', $number * 731),
+                        'tax_code' => 'DMO'.str_pad((string) $number, 13, '0', STR_PAD_LEFT),
+                        'driving_license_expiry_date' => $today->copy()->addYears(2 + ($number % 5)),
+                        'address' => "Via Demo {$number}, {$person[2]}",
+                        'notes' => $number % 4 === 0 ? 'Cliente aziendale dimostrativo.' : null,
+                        'is_active' => $number !== 15,
+                    ]
+                );
             }
+        )->values();
+    }
 
-            // La Panda occupa una cella; il Transit ne occupa due affiancate.
-            $spaces->get('1-1')->update([
-                'vehicle_id' => $panda->id,
-            ]);
+    /** @return Collection<string, ParkingSpace> */
+    private function createParkingSpaces(): Collection
+    {
+        $spaces = collect();
 
-            foreach (['1-3', '1-4'] as $position) {
-                $spaces->get($position)->update([
-                    'vehicle_id' => $transit->id,
-                ]);
+        for ($row = 1; $row <= 4; $row++) {
+            for ($column = 1; $column <= 6; $column++) {
+                $space = ParkingSpace::updateOrCreate(
+                    ['zone' => 'main', 'row_number' => $row, 'column_number' => $column],
+                    [
+                        'label' => "M-{$row}-{$column}",
+                        'vehicle_id' => null,
+                        'is_active' => ! ($row === 4 && $column === 6),
+                        'notes' => $row === 4 && $column === 6
+                            ? 'Cella temporaneamente non utilizzabile.'
+                            : null,
+                    ]
+                );
+
+                $spaces->put("{$row}-{$column}", $space);
             }
+        }
 
-            // Noleggio concluso recentemente.
-            $completedRental = Rental::create([
-                'vehicle_id' => $panda->id,
-                'customer_id' => $luca->id,
+        return $spaces;
+    }
+
+    /** @return Collection<string, Rental> */
+    private function createRentals(Collection $vehicles, Collection $customers, $today): Collection
+    {
+        $activeRentals = collect();
+
+        // Quindici noleggi completati.
+        for ($index = 0; $index < 15; $index++) {
+            $vehicle = $vehicles->get($index);
+            $days = 2 + ($index % 4);
+            $start = $today->copy()->subDays(70 - ($index * 3))->setTime(9, 0);
+            $end = $start->copy()->addDays($days);
+            $total = (float) $vehicle->daily_rate * $days;
+
+            Rental::create([
+                'vehicle_id' => $vehicle->id,
+                'customer_id' => $customers->get($index)->id,
                 'status' => Rental::STATUS_COMPLETED,
-                'starts_at' => $today->copy()->subDays(20)->setTime(9, 0),
-                'actual_starts_at' => $today->copy()->subDays(20)->setTime(9, 0),
-                'expected_ends_at' => $today->copy()->subDays(17)->setTime(9, 0),
-                'actual_ends_at' => $today->copy()->subDays(17)->setTime(10, 0),
-                'daily_rate' => 50,
-                'total_amount' => 200,
-                'amount_paid' => 200,
-                'start_mileage' => 37800,
-                'end_mileage' => 38500,
-                'notes' => 'Noleggio dimostrativo completato.',
+                'starts_at' => $start,
+                'actual_starts_at' => $start->copy()->addMinutes(10),
+                'expected_ends_at' => $end,
+                'actual_ends_at' => $end->copy()->addMinutes(30),
+                'daily_rate' => $vehicle->daily_rate,
+                'total_amount' => $total,
+                'amount_paid' => $total,
+                'start_mileage' => max(0, $vehicle->mileage - 650),
+                'end_mileage' => $vehicle->mileage,
+                'notes' => 'Noleggio storico dimostrativo.',
             ]);
+        }
 
-            // Noleggio attualmente attivo: il camper si trova fuori sede.
-            $activeRental = Rental::create([
-                'vehicle_id' => $ducato->id,
-                'customer_id' => $anna->id,
-                'status' => Rental::STATUS_ACTIVE,
-                'starts_at' => $today->copy()->subDay()->setTime(9, 0),
-                'actual_starts_at' => $today->copy()->subDay()->setTime(9, 15),
-                'expected_ends_at' => $today->copy()->addDays(3)->setTime(9, 0),
-                'actual_ends_at' => null,
-                'daily_rate' => 140,
-                'total_amount' => 560,
-                'amount_paid' => 200,
-                'start_mileage' => 22000,
-                'end_mileage' => null,
-                'notes' => 'Camper attualmente noleggiato.',
-            ]);
+        // Cinque prenotazioni annullate.
+        foreach ([15, 16, 17, 18, 19] as $offset => $vehicleIndex) {
+            $vehicle = $vehicles->get($vehicleIndex);
 
-            // Prenotazione futura.
             Rental::create([
-                'vehicle_id' => $panda->id,
-                'customer_id' => $marco->id,
-                'status' => Rental::STATUS_RESERVED,
-                'starts_at' => $today->copy()->addDays(7)->setTime(9, 0),
-                'actual_starts_at' => null,
-                'expected_ends_at' => $today->copy()->addDays(10)->setTime(9, 0),
-                'actual_ends_at' => null,
-                'daily_rate' => 50,
-                'total_amount' => 150,
-                'amount_paid' => 50,
-                'start_mileage' => null,
-                'end_mileage' => null,
-                'notes' => 'Prenotazione futura dimostrativa.',
-            ]);
-
-            // Prenotazione annullata conservata nello storico.
-            Rental::create([
-                'vehicle_id' => $transit->id,
-                'customer_id' => $luca->id,
+                'vehicle_id' => $vehicle->id,
+                'customer_id' => $customers->get($offset + 4)->id,
                 'status' => Rental::STATUS_CANCELLED,
-                'starts_at' => $today->copy()->addDays(12)->setTime(9, 0),
+                'starts_at' => $today->copy()->addDays(18 + $offset),
                 'actual_starts_at' => null,
-                'expected_ends_at' => $today->copy()->addDays(14)->setTime(9, 0),
+                'expected_ends_at' => $today->copy()->addDays(21 + $offset),
                 'actual_ends_at' => null,
-                'daily_rate' => 90,
-                'total_amount' => 180,
+                'daily_rate' => $vehicle->daily_rate,
+                'total_amount' => (float) $vehicle->daily_rate * 3,
                 'amount_paid' => 0,
                 'start_mileage' => null,
                 'end_mileage' => null,
                 'notes' => 'Prenotazione annullata dimostrativa.',
             ]);
+        }
 
-            // Registra costi recenti, storici e relative scadenze.
+        // Quattro noleggi attualmente attivi.
+        foreach ([2, 6, 13, 21] as $offset => $vehicleIndex) {
+            $vehicle = $vehicles->get($vehicleIndex);
+            $start = $today->copy()->subDays($offset + 1)->setTime(9, 0);
+            $end = $today->copy()->addDays($offset + 2)->setTime(9, 0);
+            $total = (float) $vehicle->daily_rate * ($offset + 4);
+
+            $rental = Rental::create([
+                'vehicle_id' => $vehicle->id,
+                'customer_id' => $customers->get($offset + 1)->id,
+                'status' => Rental::STATUS_ACTIVE,
+                'starts_at' => $start,
+                'actual_starts_at' => $start->copy()->addMinutes(15),
+                'expected_ends_at' => $end,
+                'actual_ends_at' => null,
+                'daily_rate' => $vehicle->daily_rate,
+                'total_amount' => $total,
+                'amount_paid' => round($total / 2, 2),
+                'start_mileage' => $vehicle->mileage,
+                'end_mileage' => null,
+                'notes' => 'Noleggio attualmente in corso.',
+            ]);
+
+            $activeRentals->put($vehicleIndex, $rental);
+        }
+
+        // Sei prenotazioni future.
+        foreach ([0, 5, 7, 15, 23, 26] as $offset => $vehicleIndex) {
+            $vehicle = $vehicles->get($vehicleIndex);
+            $start = $today->copy()->addDays(4 + ($offset * 3))->setTime(9, 0);
+            $total = (float) $vehicle->daily_rate * 3;
+
+            Rental::create([
+                'vehicle_id' => $vehicle->id,
+                'customer_id' => $customers->get($offset + 7)->id,
+                'status' => Rental::STATUS_RESERVED,
+                'starts_at' => $start,
+                'actual_starts_at' => null,
+                'expected_ends_at' => $start->copy()->addDays(3),
+                'actual_ends_at' => null,
+                'daily_rate' => $vehicle->daily_rate,
+                'total_amount' => $total,
+                'amount_paid' => round($total * 0.25, 2),
+                'start_mileage' => null,
+                'end_mileage' => null,
+                'notes' => 'Prenotazione futura dimostrativa.',
+            ]);
+        }
+
+        return $activeRentals;
+    }
+
+    private function createExpenses(Collection $vehicles, $today): void
+    {
+        // Tutti i mezzi hanno almeno una spesa.
+        foreach ($vehicles as $index => $vehicle) {
+            $category = Expense::CATEGORIES[$index % count(Expense::CATEGORIES)];
+
             Expense::create([
-                'vehicle_id' => $panda->id,
-                'category' => Expense::CATEGORY_PURCHASE,
-                'description' => 'Acquisto del veicolo',
-                'amount' => 18000,
-                'expense_date' => $today->copy()->subDays(400),
-                'expires_on' => null,
-                'mileage' => 0,
-                'supplier' => 'Concessionaria Demo',
+                'vehicle_id' => $vehicle->id,
+                'category' => $category,
+                'description' => 'Costo operativo dimostrativo',
+                'amount' => 75 + ($index * 37),
+                'expense_date' => $today->copy()->subDays($index + 8),
+                'expires_on' => in_array($category, [
+                    Expense::CATEGORY_INSURANCE,
+                    Expense::CATEGORY_ROAD_TAX,
+                    Expense::CATEGORY_INSPECTION,
+                ], true) ? $today->copy()->addDays(($index - 10) * 4) : null,
+                'mileage' => max(0, $vehicle->mileage - 500),
+                'supplier' => 'Fornitore Demo '.(($index % 5) + 1),
                 'notes' => null,
             ]);
+        }
+
+        // I primi quindici mezzi hanno anche una spesa recente.
+        for ($index = 0; $index < 15; $index++) {
+            $vehicle = $vehicles->get($index);
 
             Expense::create([
-                'vehicle_id' => $panda->id,
-                'category' => Expense::CATEGORY_MAINTENANCE,
-                'description' => 'Tagliando ordinario',
-                'amount' => 320,
-                'expense_date' => $today->copy()->subDays(12),
+                'vehicle_id' => $vehicle->id,
+                'category' => $index % 2 === 0
+                    ? Expense::CATEGORY_MAINTENANCE
+                    : Expense::CATEGORY_CLEANING,
+                'description' => $index % 2 === 0
+                    ? 'Manutenzione periodica'
+                    : 'Pulizia professionale',
+                'amount' => 45 + ($index * 18),
+                'expense_date' => $today->copy()->subDays($index + 1),
                 'expires_on' => null,
-                'mileage' => 38200,
-                'supplier' => 'Officina Centrale',
-                'notes' => 'Sostituiti olio e filtri.',
+                'mileage' => $vehicle->mileage,
+                'supplier' => 'Officina e servizi Demo',
+                'notes' => 'Spesa recente dimostrativa.',
             ]);
+        }
+    }
 
-            Expense::create([
-                'vehicle_id' => $transit->id,
-                'category' => Expense::CATEGORY_INSURANCE,
-                'description' => 'Assicurazione annuale',
-                'amount' => 860,
-                'expense_date' => $today->copy()->subDays(300),
-                'expires_on' => $today->copy()->addDays(20),
-                'mileage' => 69000,
-                'supplier' => 'Assicurazioni Demo',
-                'notes' => 'Scadenza prossima.',
-            ]);
+    private function parkVehicles(Collection $vehicles, Collection $spaces): void
+    {
+        $placements = [
+            0 => ['1-1'], 1 => ['1-2', '1-3'], 4 => ['1-4'],
+            7 => ['1-5'], 10 => ['1-6'],
+            8 => ['2-1', '2-2', '2-3', '2-4'],
+            5 => ['2-5'], 12 => ['2-6'],
+            17 => ['3-1', '3-2'], 18 => ['3-3'],
+        ];
 
-            Expense::create([
-                'vehicle_id' => $ducato->id,
-                'category' => Expense::CATEGORY_ROAD_TAX,
-                'description' => 'Bollo del camper',
-                'amount' => 390,
-                'expense_date' => $today->copy()->subDays(370),
-                'expires_on' => $today->copy()->subDays(5),
-                'mileage' => 18500,
-                'supplier' => 'Regione Marche',
-                'notes' => 'Scadenza dimostrativa già superata.',
-            ]);
+        foreach ($placements as $vehicleIndex => $positions) {
+            foreach ($positions as $position) {
+                $spaces->get($position)->update([
+                    'vehicle_id' => $vehicles->get($vehicleIndex)->id,
+                ]);
+            }
+        }
+    }
 
-            Expense::create([
-                'vehicle_id' => $panda->id,
-                'category' => Expense::CATEGORY_CLEANING,
-                'description' => 'Pulizia completa',
-                'amount' => 45,
-                'expense_date' => $today->copy()->subDays(2),
-                'expires_on' => null,
-                'mileage' => 38500,
-                'supplier' => 'Autolavaggio Demo',
-                'notes' => null,
-            ]);
+    private function createMovements(
+        Collection $vehicles,
+        Collection $spaces,
+        Collection $activeRentals,
+        User $user,
+        $today
+    ): void {
+        $parked = [
+            0 => '1-1', 1 => '1-2', 4 => '1-4', 7 => '1-5', 10 => '1-6',
+            8 => '2-1', 5 => '2-5', 12 => '2-6', 17 => '3-1', 18 => '3-3',
+        ];
 
-            // Registra il rientro della Panda nella prima cella.
+        foreach ($parked as $vehicleIndex => $position) {
+            $vehicle = $vehicles->get($vehicleIndex);
+            $space = $spaces->get($position);
+
             ParkingMovement::create([
-                'vehicle_id' => $panda->id,
-                'vehicle_license_plate' => $panda->license_plate,
-                'performed_by_user_id' => $user->id,
-                'rental_id' => $completedRental->id,
-                'type' => ParkingMovement::TYPE_RENTAL_RETURN,
-                'from_parking_space_id' => null,
-                'from_zone' => null,
-                'from_row_number' => null,
-                'from_column_number' => null,
-                'to_parking_space_id' => $spaces->get('1-1')->id,
-                'to_zone' => 'main',
-                'to_row_number' => 1,
-                'to_column_number' => 1,
-                'parking_units' => 1,
-                'notes' => 'Rientro dal noleggio dimostrativo.',
-                'occurred_at' => $today->copy()->subDays(17)->setTime(10, 0),
-            ]);
-
-            // Registra il parcheggio manuale del Transit.
-            ParkingMovement::create([
-                'vehicle_id' => $transit->id,
-                'vehicle_license_plate' => $transit->license_plate,
+                'vehicle_id' => $vehicle->id,
+                'vehicle_license_plate' => $vehicle->license_plate,
                 'performed_by_user_id' => $user->id,
                 'rental_id' => null,
                 'type' => ParkingMovement::TYPE_PARKED,
@@ -363,34 +379,39 @@ class DemoDataSeeder extends Seeder
                 'from_zone' => null,
                 'from_row_number' => null,
                 'from_column_number' => null,
-                'to_parking_space_id' => $spaces->get('1-3')->id,
+                'to_parking_space_id' => $space->id,
                 'to_zone' => 'main',
-                'to_row_number' => 1,
-                'to_column_number' => 3,
-                'parking_units' => 2,
+                'to_row_number' => $space->row_number,
+                'to_column_number' => $space->column_number,
+                'parking_units' => $vehicle->parking_units,
                 'notes' => 'Parcheggio iniziale dimostrativo.',
-                'occurred_at' => $today->copy()->subDays(10)->setTime(16, 30),
+                'occurred_at' => $today->copy()->subDays(($vehicleIndex % 12) + 1),
             ]);
+        }
 
-            // Registra la partenza del camper per il noleggio attivo.
+        foreach ([2, 6, 13, 21] as $index => $vehicleIndex) {
+            $vehicle = $vehicles->get($vehicleIndex);
+            $rental = $activeRentals->get($vehicleIndex);
+            $space = $spaces->get('4-'.($index + 1));
+
             ParkingMovement::create([
-                'vehicle_id' => $ducato->id,
-                'vehicle_license_plate' => $ducato->license_plate,
+                'vehicle_id' => $vehicle->id,
+                'vehicle_license_plate' => $vehicle->license_plate,
                 'performed_by_user_id' => $user->id,
-                'rental_id' => $activeRental->id,
+                'rental_id' => $rental->id,
                 'type' => ParkingMovement::TYPE_RENTAL_DEPARTURE,
-                'from_parking_space_id' => $spaces->get('2-1')->id,
+                'from_parking_space_id' => $space->id,
                 'from_zone' => 'main',
-                'from_row_number' => 2,
-                'from_column_number' => 1,
+                'from_row_number' => 4,
+                'from_column_number' => $index + 1,
                 'to_parking_space_id' => null,
                 'to_zone' => null,
                 'to_row_number' => null,
                 'to_column_number' => null,
-                'parking_units' => 4,
+                'parking_units' => $vehicle->parking_units,
                 'notes' => 'Partenza del noleggio attivo dimostrativo.',
-                'occurred_at' => $today->copy()->subDay()->setTime(9, 15),
+                'occurred_at' => $rental->actual_starts_at,
             ]);
-        });
+        }
     }
 }

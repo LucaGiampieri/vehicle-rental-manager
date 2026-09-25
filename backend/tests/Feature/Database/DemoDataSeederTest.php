@@ -27,62 +27,33 @@ class DemoDataSeederTest extends TestCase
             'name' => 'Amministratore Demo',
         ]);
 
-        // Verifica la password sicura dell’account dimostrativo
         $demoUser = User::query()
             ->where('email', 'admin@example.com')
             ->firstOrFail();
 
         $this->assertTrue(
-            Hash::check(
-                'PasswordDemo!2026',
-                $demoUser->password
-            )
+            Hash::check('PasswordDemo!2026', $demoUser->password)
         );
 
-        $this->assertDatabaseCount('vehicles', 4);
-        $this->assertDatabaseCount('customers', 3);
+        $this->assertDatabaseCount('vehicles', 30);
+        $this->assertDatabaseCount('customers', 15);
         $this->assertDatabaseCount('parking_spaces', 24);
-        $this->assertDatabaseCount('rentals', 4);
-        $this->assertDatabaseCount('expenses', 5);
-        $this->assertDatabaseCount('parking_movements', 3);
+        $this->assertDatabaseCount('rentals', 30);
+        $this->assertDatabaseCount('expenses', 45);
+        $this->assertDatabaseCount('parking_movements', 14);
 
-        $panda = Vehicle::query()
-            ->where('license_plate', 'DEMO-001')
-            ->firstOrFail();
+        $panda = Vehicle::query()->where('license_plate', 'DEMO-001')->firstOrFail();
+        $transit = Vehicle::query()->where('license_plate', 'DEMO-002')->firstOrFail();
+        $ducato = Vehicle::query()->where('license_plate', 'DEMO-003')->firstOrFail();
 
-        $transit = Vehicle::query()
-            ->where('license_plate', 'DEMO-002')
-            ->firstOrFail();
+        $this->assertSame(1, ParkingSpace::query()->where('vehicle_id', $panda->id)->count());
+        $this->assertSame(2, ParkingSpace::query()->where('vehicle_id', $transit->id)->count());
+        $this->assertSame(0, ParkingSpace::query()->where('vehicle_id', $ducato->id)->count());
 
-        $ducato = Vehicle::query()
-            ->where('license_plate', 'DEMO-003')
-            ->firstOrFail();
-
-        $this->assertSame(
-            1,
-            ParkingSpace::query()
-                ->where('vehicle_id', $panda->id)
-                ->count()
-        );
-
-        $this->assertSame(
-            2,
-            ParkingSpace::query()
-                ->where('vehicle_id', $transit->id)
-                ->count()
-        );
-
-        $this->assertSame(
-            0,
-            ParkingSpace::query()
-                ->where('vehicle_id', $ducato->id)
-                ->count()
-        );
-
-        $this->assertDatabaseHas('rentals', [
-            'vehicle_id' => $ducato->id,
-            'status' => Rental::STATUS_ACTIVE,
-        ]);
+        $this->assertSame(4, Rental::query()->where('status', Rental::STATUS_ACTIVE)->count());
+        $this->assertSame(6, Rental::query()->where('status', Rental::STATUS_RESERVED)->count());
+        $this->assertSame(15, Rental::query()->where('status', Rental::STATUS_COMPLETED)->count());
+        $this->assertSame(5, Rental::query()->where('status', Rental::STATUS_CANCELLED)->count());
 
         $this->assertDatabaseHas('parking_movements', [
             'vehicle_id' => $ducato->id,
@@ -93,7 +64,6 @@ class DemoDataSeederTest extends TestCase
             'zone' => 'main',
             'row_number' => 4,
             'column_number' => 6,
-            // MySQL conserva i booleani come 0 e 1.
             'is_active' => 0,
         ]);
     }
@@ -104,26 +74,23 @@ class DemoDataSeederTest extends TestCase
         $this->seed(DemoDataSeeder::class);
         $this->seed(DemoDataSeeder::class);
 
-        $this->assertDatabaseCount('vehicles', 4);
-        $this->assertDatabaseCount('customers', 3);
+        $this->assertDatabaseCount('vehicles', 30);
+        $this->assertDatabaseCount('customers', 15);
         $this->assertDatabaseCount('parking_spaces', 24);
-        $this->assertDatabaseCount('rentals', 4);
-        $this->assertDatabaseCount('expenses', 5);
-        $this->assertDatabaseCount('parking_movements', 3);
+        $this->assertDatabaseCount('rentals', 30);
+        $this->assertDatabaseCount('expenses', 45);
+        $this->assertDatabaseCount('parking_movements', 14);
     }
 
-    // Verifica che il Seeder principale non inserisca dati demo in produzione
+    // Verifica che il Seeder principale non inserisca demo in produzione.
     public function test_demo_data_is_not_created_in_production(): void
     {
-        // Simula l'ambiente di produzione
         $this->app->detectEnvironment(
             fn (): string => 'production'
         );
 
-        // Esegue direttamente il Seeder principale
         (new DatabaseSeeder)->run();
 
-        // L'account con password dimostrativa non deve essere creato
         $this->assertDatabaseMissing('users', [
             'email' => 'admin@example.com',
         ]);

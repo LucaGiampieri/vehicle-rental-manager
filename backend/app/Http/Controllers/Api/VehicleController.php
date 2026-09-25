@@ -18,16 +18,42 @@ use Symfony\Component\HttpFoundation\Response;
 
 class VehicleController extends Controller
 {
-    // Restituisce l’elenco ricercabile, filtrabile e paginato dei veicoli
+    /*
+     * Relazioni necessarie nell'elenco dei veicoli.
+     *
+     * Carichiamo la copertina e la situazione operativa corrente,
+     * senza recuperare tutta la galleria.
+     */
+    private const LIST_RELATIONS = [
+        'primaryImage',
+        'activeRental.customer',
+        'nextReservation.customer',
+    ];
+
+    /*
+     * Relazioni necessarie nella scheda completa del veicolo.
+     *
+     * La pagina di dettaglio riceve anche tutte le fotografie.
+     */
+    private const DETAIL_RELATIONS = [
+        'primaryImage',
+        'images',
+        'activeRental.customer',
+        'nextReservation.customer',
+    ];
+
+    // Restituisce l'elenco ricercabile, filtrabile e paginato dei veicoli
     public function index(
         IndexVehicleRequest $request
     ): AnonymousResourceCollection {
-        // Recupera esclusivamente i filtri validati
         $filters = $request->validated();
 
-        // Prepara la query, la copertina e i conteggi
+        /*
+         * Il caricamento anticipato delle relazioni evita di eseguire
+         * una nuova query per ogni veicolo presente nell'elenco.
+         */
         $query = Vehicle::query()
-            ->with('primaryImage')
+            ->with(self::LIST_RELATIONS)
             ->withCount([
                 'rentals',
                 'expenses',
@@ -72,7 +98,6 @@ class VehicleController extends Controller
             );
         }
 
-        // Permette di scegliere la dimensione della pagina
         $perPage = $filters['per_page'] ?? 15;
 
         $vehicles = $query
@@ -87,7 +112,6 @@ class VehicleController extends Controller
     public function store(
         StoreVehicleRequest $request
     ): JsonResponse {
-        // Restituisce soltanto i dati che hanno superato la validazione
         $vehicle = Vehicle::create(
             $request->validated()
         );
@@ -95,11 +119,11 @@ class VehicleController extends Controller
         // Rilegge i valori predefiniti assegnati dal database
         $vehicle->refresh();
 
-        // Il nuovo veicolo non possiede ancora fotografie
-        $vehicle->load([
-            'primaryImage',
-            'images',
-        ]);
+        /*
+         * Un veicolo appena creato non possiede noleggi o fotografie,
+         * ma restituiamo comunque la stessa struttura degli altri endpoint.
+         */
+        $vehicle->load(self::DETAIL_RELATIONS);
 
         $vehicle->loadCount([
             'rentals',
@@ -113,15 +137,11 @@ class VehicleController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    // Restituisce un singolo veicolo
+    // Restituisce la scheda completa di un singolo veicolo
     public function show(
         Vehicle $vehicle
     ): VehicleResource {
-        // Carica copertina e galleria completa
-        $vehicle->load([
-            'primaryImage',
-            'images',
-        ]);
+        $vehicle->load(self::DETAIL_RELATIONS);
 
         $vehicle->loadCount([
             'rentals',
@@ -187,14 +207,8 @@ class VehicleController extends Controller
             return $lockedVehicle;
         });
 
-        // Rilegge il veicolo dopo la modifica
         $vehicle->refresh();
-
-        // Restituisce anche copertina e galleria
-        $vehicle->load([
-            'primaryImage',
-            'images',
-        ]);
+        $vehicle->load(self::DETAIL_RELATIONS);
 
         $vehicle->loadCount([
             'rentals',
@@ -210,7 +224,6 @@ class VehicleController extends Controller
     public function destroy(
         Vehicle $vehicle
     ): Response {
-        // Controlla noleggi, spese e occupazione dell’autorimessa
         $hasRelatedData = $vehicle->rentals()->exists()
             || $vehicle->expenses()->exists()
             || $vehicle->parkingSpaces()->exists();

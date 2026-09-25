@@ -2,12 +2,17 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class VehicleResource extends JsonResource
 {
-    // Trasforma il Model Vehicle nel JSON inviato al frontend
+    /**
+     * Trasforma il veicolo nel JSON inviato al frontend.
+     *
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [
@@ -27,6 +32,28 @@ class VehicleResource extends JsonResource
             'daily_rate' => $this->daily_rate,
             'is_active' => $this->is_active,
 
+            /*
+             * Stato operativo calcolato dal backend.
+             * Il frontend dovrà soltanto tradurlo e mostrarlo.
+             */
+            'operational_status' => $this->operationalStatus(),
+
+            // Noleggio attualmente in corso, se presente
+            'active_rental' => $this->when(
+                $this->relationLoaded('activeRental'),
+                fn () => $this->activeRental
+                    ? new RentalResource($this->activeRental)
+                    : null
+            ),
+
+            // Prenotazione più vicina, se presente
+            'next_reservation' => $this->when(
+                $this->relationLoaded('nextReservation'),
+                fn () => $this->nextReservation
+                    ? new RentalResource($this->nextReservation)
+                    : null
+            ),
+
             // Copertina utilizzata negli elenchi e nelle schede
             'primary_image' => new VehicleImageResource(
                 $this->whenLoaded('primaryImage')
@@ -40,7 +67,7 @@ class VehicleResource extends JsonResource
             // Numero complessivo delle fotografie
             'images_count' => $this->whenCounted('images'),
 
-            // I conteggi vengono aggiunti soltanto se caricati dal Controller
+            // Conteggi aggiunti soltanto quando caricati dal Controller
             'rentals_count' => $this->whenCounted('rentals'),
             'expenses_count' => $this->whenCounted('expenses'),
             'parking_spaces_count' => $this->whenCounted('parkingSpaces'),
@@ -49,5 +76,36 @@ class VehicleResource extends JsonResource
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
+    }
+
+    /*
+     * Determina lo stato seguendo un ordine di priorità:
+     *
+     * 1. Un veicolo disattivato rimane sempre fuori servizio.
+     * 2. Un noleggio attivo indica che il veicolo è consegnato.
+     * 3. Una prenotazione indica che il veicolo è riservato.
+     * 4. In tutti gli altri casi il veicolo è disponibile.
+     */
+    private function operationalStatus(): string
+    {
+        if (! $this->is_active) {
+            return Vehicle::OPERATIONAL_STATUS_INACTIVE;
+        }
+
+        if (
+            $this->relationLoaded('activeRental')
+            && $this->activeRental !== null
+        ) {
+            return Vehicle::OPERATIONAL_STATUS_RENTED;
+        }
+
+        if (
+            $this->relationLoaded('nextReservation')
+            && $this->nextReservation !== null
+        ) {
+            return Vehicle::OPERATIONAL_STATUS_RESERVED;
+        }
+
+        return Vehicle::OPERATIONAL_STATUS_AVAILABLE;
     }
 }

@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Vehicle extends Model
 {
-    // Permette di creare veicoli fittizi tramite VehicleFactory
     use HasFactory;
 
     // Tipi di veicolo disponibili
@@ -27,8 +26,7 @@ class Vehicle extends Model
 
     public const TYPE_OTHER = 'other';
 
-    // Elenco completo dei tipi ammessi
-    // Lo useremo nella validazione delle API
+    // Elenco completo dei tipi ammessi dalla validazione
     public const TYPES = [
         self::TYPE_CAR,
         self::TYPE_MOTORCYCLE,
@@ -38,6 +36,15 @@ class Vehicle extends Model
         self::TYPE_BUS,
         self::TYPE_OTHER,
     ];
+
+    // Stati operativi mostrati nel frontend
+    public const OPERATIONAL_STATUS_AVAILABLE = 'available';
+
+    public const OPERATIONAL_STATUS_RESERVED = 'reserved';
+
+    public const OPERATIONAL_STATUS_RENTED = 'rented';
+
+    public const OPERATIONAL_STATUS_INACTIVE = 'inactive';
 
     // Numero di celle richieste in base alla dimensione del veicolo
     public const PARKING_UNITS_SMALL = 1;
@@ -49,7 +56,6 @@ class Vehicle extends Model
     public const PARKING_UNITS_EXTRA_LARGE = 8;
 
     // Elenco dei numeri di celle ammessi
-    // Lo useremo nella validazione delle API
     public const ALLOWED_PARKING_UNITS = [
         self::PARKING_UNITS_SMALL,
         self::PARKING_UNITS_STANDARD,
@@ -70,7 +76,7 @@ class Vehicle extends Model
         'daily_rate',
     ];
 
-    // Tipi dei valori restituiti dal Model
+    // Converte automaticamente i valori recuperati dal database
     protected function casts(): array
     {
         return [
@@ -82,28 +88,44 @@ class Vehicle extends Model
         ];
     }
 
-    // Relazione uno a molti (1:N):
-    // un veicolo può avere molti noleggi, mentre ogni noleggio appartiene a un solo veicolo
+    // Un veicolo può avere molti noleggi
     public function rentals(): HasMany
     {
         return $this->hasMany(Rental::class);
     }
 
-    // Relazione uno a molti (1:N):
-    // un veicolo può avere molte spese, mentre ogni spesa appartiene a un solo veicolo
+    /*
+     * Recupera l'eventuale noleggio attualmente attivo.
+     * In base alle regole del gestionale può esisterne soltanto uno.
+     */
+    public function activeRental(): HasOne
+    {
+        return $this->hasOne(Rental::class)
+            ->where('status', Rental::STATUS_ACTIVE);
+    }
+
+    // Recupera la prenotazione valida più vicina
+    public function nextReservation(): HasOne
+    {
+        return $this->hasOne(Rental::class)
+            ->where('status', Rental::STATUS_RESERVED)
+            ->where('expected_ends_at', '>', now())
+            ->orderBy('starts_at');
+    }
+
+    // Un veicolo può possedere molte spese
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);
     }
 
-    // Relazione uno a molti (1:N):
-    // un veicolo può occupare più celle, mentre ogni cella contiene al massimo un veicolo
+    // Un veicolo può occupare più celle dell'autorimessa
     public function parkingSpaces(): HasMany
     {
         return $this->hasMany(ParkingSpace::class);
     }
 
-    // Restituisce tutte le immagini del veicolo nell’ordine della galleria
+    // Restituisce tutte le immagini nell'ordine della galleria
     public function images(): HasMany
     {
         return $this->hasMany(VehicleImage::class)

@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Expense;
 use App\Models\ParkingSpace;
+use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleImage;
@@ -21,7 +22,6 @@ class VehicleApiTest extends TestCase
     {
         // Invia una richiesta senza effettuare il login
         $response = $this->getJson('/api/vehicles');
-
         // La richiesta deve essere respinta con il codice 401 Unauthorized
         $response->assertUnauthorized();
     }
@@ -31,24 +31,18 @@ class VehicleApiTest extends TestCase
     {
         // Crea un utente fittizio nel database di test
         $user = User::factory()->create();
-
         // Autentica l'utente attraverso Sanctum
         Sanctum::actingAs($user);
-
         // Crea tre veicoli fittizi nel database di test
         Vehicle::factory()
             ->count(3)
             ->create();
-
         // Richiede l'elenco dei veicoli attraverso l'API
         $response = $this->getJson('/api/vehicles');
-
         // Verifica che la richiesta sia riuscita
         $response->assertOk();
-
         // Verifica che la proprietà data contenga tre veicoli
         $response->assertJsonCount(3, 'data');
-
         // Verifica la struttura della risposta JSON
         $response->assertJsonStructure([
             'data' => [
@@ -80,23 +74,19 @@ class VehicleApiTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         $expectedVehicle = Vehicle::factory()->create([
             'license_plate' => 'AA111BB',
             'brand' => 'Fiat',
             'model' => 'Panda',
         ]);
-
         Vehicle::factory()->create([
             'license_plate' => 'CC222DD',
             'brand' => 'Ford',
             'model' => 'Transit',
         ]);
-
         $response = $this->getJson(
             '/api/vehicles?search=panda'
         );
-
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath(
@@ -110,29 +100,24 @@ class VehicleApiTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         $expectedVehicle = Vehicle::factory()->create([
             'license_plate' => 'EE333FF',
             'type' => Vehicle::TYPE_CAR,
             'is_active' => false,
         ]);
-
         Vehicle::factory()->create([
             'license_plate' => 'GG444HH',
             'type' => Vehicle::TYPE_CAR,
             'is_active' => true,
         ]);
-
         Vehicle::factory()->create([
             'license_plate' => 'II555JJ',
             'type' => Vehicle::TYPE_VAN,
             'is_active' => false,
         ]);
-
         $response = $this->getJson(
             '/api/vehicles?type=car&is_active=false'
         );
-
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath(
@@ -150,15 +135,12 @@ class VehicleApiTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         Vehicle::factory()
             ->count(5)
             ->create();
-
         $response = $this->getJson(
             '/api/vehicles?per_page=2'
         );
-
         $response->assertOk();
         $response->assertJsonCount(2, 'data');
         $response->assertJsonPath('meta.per_page', 2);
@@ -171,13 +153,10 @@ class VehicleApiTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         $response = $this->getJson(
             '/api/vehicles?type=spaceship&is_active=maybe&per_page=101'
         );
-
         $response->assertUnprocessable();
-
         $response->assertJsonValidationErrors([
             'type',
             'is_active',
@@ -191,7 +170,6 @@ class VehicleApiTest extends TestCase
         // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         // Prepara i dati da inviare all'API
         $vehicleData = [
             'license_plate' => 'AB123CD',
@@ -204,19 +182,15 @@ class VehicleApiTest extends TestCase
             'daily_rate' => 45.50,
             'is_active' => true,
         ];
-
         // Invia una richiesta POST per creare il veicolo
         $response = $this->postJson('/api/vehicles', $vehicleData);
-
         // Verifica che l'API risponda con 201 Created
         $response->assertCreated();
-
         // Verifica i dati restituiti dall'API
         $response->assertJsonPath('data.license_plate', 'AB123CD');
         $response->assertJsonPath('data.brand', 'Fiat');
         $response->assertJsonPath('data.model', 'Panda');
         $response->assertJsonPath('data.daily_rate', '45.50');
-
         // Verifica che il veicolo esista realmente nel database di test
         $this->assertDatabaseHas('vehicles', [
             'license_plate' => 'AB123CD',
@@ -237,26 +211,21 @@ class VehicleApiTest extends TestCase
         // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         // Crea il veicolo che verrà richiesto
         $vehicle = Vehicle::factory()->create([
             'license_plate' => 'CD456EF',
             'brand' => 'Ford',
             'model' => 'Transit',
         ]);
-
         // Invia una richiesta GET usando l'ID del veicolo
         $response = $this->getJson("/api/vehicles/{$vehicle->id}");
-
         // Verifica che la richiesta sia riuscita
         $response->assertOk();
-
         // Verifica i dati del veicolo restituito
         $response->assertJsonPath('data.id', $vehicle->id);
         $response->assertJsonPath('data.license_plate', 'CD456EF');
         $response->assertJsonPath('data.brand', 'Ford');
         $response->assertJsonPath('data.model', 'Transit');
-
         // Verifica che siano presenti anche i conteggi delle relazioni
         $response->assertJsonStructure([
             'data' => [
@@ -273,7 +242,6 @@ class VehicleApiTest extends TestCase
         // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         // Crea il veicolo iniziale
         $vehicle = Vehicle::factory()->create([
             'license_plate' => 'EF789GH',
@@ -282,7 +250,6 @@ class VehicleApiTest extends TestCase
             'mileage' => 30000,
             'daily_rate' => 40.00,
         ]);
-
         // Invia solamente i campi che vogliamo modificare
         $response = $this->patchJson(
             "/api/vehicles/{$vehicle->id}",
@@ -292,20 +259,16 @@ class VehicleApiTest extends TestCase
                 'is_active' => false,
             ]
         );
-
         // Verifica che la modifica sia riuscita
         $response->assertOk();
-
         // Verifica i nuovi valori restituiti dall'API
         $response->assertJsonPath('data.mileage', 45000);
         $response->assertJsonPath('data.daily_rate', '48.50');
         $response->assertJsonPath('data.is_active', false);
-
         // Verifica che i campi non inviati siano rimasti invariati
         $response->assertJsonPath('data.license_plate', 'EF789GH');
         $response->assertJsonPath('data.brand', 'Renault');
         $response->assertJsonPath('data.model', 'Clio');
-
         // Verifica i valori realmente salvati nel database
         $this->assertDatabaseHas('vehicles', [
             'id' => $vehicle->id,
@@ -323,11 +286,9 @@ class VehicleApiTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         $vehicle = Vehicle::factory()->create([
             'mileage' => 50000,
         ]);
-
         // Prova a inserire un chilometraggio inferiore
         $response = $this->patchJson(
             "/api/vehicles/{$vehicle->id}",
@@ -335,10 +296,8 @@ class VehicleApiTest extends TestCase
                 'mileage' => 49999,
             ]
         );
-
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['mileage']);
-
         // Il valore originale deve essere rimasto invariato
         $this->assertSame(
             50000,
@@ -351,18 +310,15 @@ class VehicleApiTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         $vehicle = Vehicle::factory()->create([
             'parking_units' => 2,
         ]);
-
         // Simula le due celle occupate dal veicolo
         ParkingSpace::factory()
             ->count(2)
             ->create([
                 'vehicle_id' => $vehicle->id,
             ]);
-
         // Prova a cambiare le dimensioni mentre il mezzo è parcheggiato
         $response = $this->patchJson(
             "/api/vehicles/{$vehicle->id}",
@@ -370,10 +326,8 @@ class VehicleApiTest extends TestCase
                 'parking_units' => 4,
             ]
         );
-
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['parking_units']);
-
         // Il veicolo deve continuare a richiedere due celle
         $this->assertSame(
             2,
@@ -387,18 +341,14 @@ class VehicleApiTest extends TestCase
         // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         // Crea un veicolo senza noleggi, spese o parcheggi collegati
         $vehicle = Vehicle::factory()->create([
             'license_plate' => 'GH123IJ',
         ]);
-
         // Invia la richiesta DELETE usando l'ID del veicolo
         $response = $this->deleteJson("/api/vehicles/{$vehicle->id}");
-
         // Verifica che l'eliminazione restituisca 204 No Content
         $response->assertNoContent();
-
         // Verifica che il veicolo non esista più nel database
         $this->assertDatabaseMissing('vehicles', [
             'id' => $vehicle->id,
@@ -412,7 +362,6 @@ class VehicleApiTest extends TestCase
         // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         // Invia dati volutamente non validi
         $response = $this->postJson('/api/vehicles', [
             'license_plate' => '',
@@ -425,10 +374,8 @@ class VehicleApiTest extends TestCase
             'daily_rate' => -10,
             'is_active' => 'non-booleano',
         ]);
-
         // Verifica che Laravel risponda con 422 Unprocessable Entity
         $response->assertUnprocessable();
-
         // Verifica gli errori di validazione restituiti
         $response->assertJsonValidationErrors([
             'license_plate',
@@ -441,7 +388,6 @@ class VehicleApiTest extends TestCase
             'daily_rate',
             'is_active',
         ]);
-
         // Verifica che nessun veicolo sia stato inserito
         $this->assertDatabaseCount('vehicles', 0);
     }
@@ -452,35 +398,28 @@ class VehicleApiTest extends TestCase
         // Crea e autentica un utente fittizio
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         // Crea il veicolo che proveremo a eliminare
         $vehicle = Vehicle::factory()->create([
             'license_plate' => 'IJ456KL',
         ]);
-
         // Crea una spesa collegata espressamente a questo veicolo
         Expense::factory()
             ->for($vehicle)
             ->create();
-
         // Prova a eliminare il veicolo
         $response = $this->deleteJson("/api/vehicles/{$vehicle->id}");
-
         // L'API deve impedire l'eliminazione con 409 Conflict
         $response->assertConflict();
-
         // Verifica il messaggio restituito
         $response->assertJsonPath(
             'message',
             'Il veicolo non può essere eliminato perché possiede noleggi, spese o celle dell’autorimessa collegate. Rimuovilo dall’autorimessa oppure disattivalo.'
         );
-
         // Verifica che il veicolo sia ancora presente nel database
         $this->assertDatabaseHas('vehicles', [
             'id' => $vehicle->id,
             'license_plate' => 'IJ456KL',
         ]);
-
         // Verifica che anche la spesa collegata sia ancora presente
         $this->assertDatabaseHas('expenses', [
             'vehicle_id' => $vehicle->id,
@@ -492,25 +431,20 @@ class VehicleApiTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         $vehicle = Vehicle::factory()->create();
-
         $primaryImage = VehicleImage::factory()
             ->for($vehicle)
             ->primary()
             ->create([
                 'sort_order' => 1,
             ]);
-
         $secondaryImage = VehicleImage::factory()
             ->for($vehicle)
             ->create([
                 'sort_order' => 2,
             ]);
-
         // Nell’elenco vengono restituite copertina e quantità
         $listResponse = $this->getJson('/api/vehicles');
-
         $listResponse->assertOk();
         $listResponse->assertJsonPath(
             'data.0.primary_image.id',
@@ -520,12 +454,10 @@ class VehicleApiTest extends TestCase
             'data.0.images_count',
             2
         );
-
         // Nella scheda viene restituita anche la galleria completa
         $showResponse = $this->getJson(
             "/api/vehicles/{$vehicle->id}"
         );
-
         $showResponse->assertOk();
         $showResponse->assertJsonPath(
             'data.primary_image.id',
@@ -553,40 +485,199 @@ class VehicleApiTest extends TestCase
     public function test_deleting_vehicle_removes_its_image_files(): void
     {
         Storage::fake('public');
-
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
         $vehicle = Vehicle::factory()->create();
-
         $path = "vehicles/{$vehicle->id}/vehicle.jpg";
-
         Storage::disk('public')->put(
             $path,
             'image content'
         );
-
         $image = VehicleImage::factory()
             ->for($vehicle)
             ->primary()
             ->create([
                 'path' => $path,
             ]);
-
         $response = $this->deleteJson(
             "/api/vehicles/{$vehicle->id}"
         );
-
         $response->assertNoContent();
-
         $this->assertDatabaseMissing('vehicles', [
             'id' => $vehicle->id,
         ]);
-
         $this->assertDatabaseMissing('vehicle_images', [
             'id' => $image->id,
         ]);
-
         Storage::disk('public')->assertMissing($path);
+    }
+
+    // Distingue un veicolo disponibile da uno disattivato
+    public function test_vehicle_response_includes_basic_operational_status(): void
+    {
+        $this->authenticateUser();
+        $availableVehicle = Vehicle::factory()->create([
+            'is_active' => true,
+        ]);
+        $inactiveVehicle = Vehicle::factory()->create([
+            'is_active' => false,
+        ]);
+        $this->getJson("/api/vehicles/{$availableVehicle->id}")
+            ->assertOk()
+            ->assertJsonPath(
+                'data.operational_status',
+                Vehicle::OPERATIONAL_STATUS_AVAILABLE
+            )
+            ->assertJsonPath('data.active_rental', null)
+            ->assertJsonPath('data.next_reservation', null);
+        $this->getJson("/api/vehicles/{$inactiveVehicle->id}")
+            ->assertOk()
+            ->assertJsonPath(
+                'data.operational_status',
+                Vehicle::OPERATIONAL_STATUS_INACTIVE
+            );
+    }
+
+    // Restituisce il noleggio attivo e il relativo cliente
+    public function test_vehicle_response_includes_active_rental(): void
+    {
+        $this->authenticateUser();
+        $vehicle = Vehicle::factory()->create();
+        $rental = Rental::factory()
+            ->for($vehicle)
+            ->create([
+                'status' => Rental::STATUS_ACTIVE,
+                'starts_at' => now()->subDay(),
+                'actual_starts_at' => now()->subDay(),
+                'expected_ends_at' => now()->addDay(),
+                'start_mileage' => $vehicle->mileage,
+            ]);
+        $response = $this->getJson(
+            "/api/vehicles/{$vehicle->id}"
+        );
+        $response->assertOk();
+        $response->assertJsonPath(
+            'data.operational_status',
+            Vehicle::OPERATIONAL_STATUS_RENTED
+        );
+        $response->assertJsonPath(
+            'data.active_rental.id',
+            $rental->id
+        );
+        $response->assertJsonPath(
+            'data.active_rental.customer.id',
+            $rental->customer_id
+        );
+        $response->assertJsonPath('data.next_reservation', null);
+    }
+
+    // Restituisce la prenotazione futura più vicina
+    public function test_vehicle_response_includes_next_reservation(): void
+    {
+        $this->authenticateUser();
+        $vehicle = Vehicle::factory()->create();
+        $reservation = Rental::factory()
+            ->for($vehicle)
+            ->create([
+                'status' => Rental::STATUS_RESERVED,
+                'starts_at' => now()->addDay(),
+                'expected_ends_at' => now()->addDays(3),
+                'actual_starts_at' => null,
+                'actual_ends_at' => null,
+                'start_mileage' => null,
+                'end_mileage' => null,
+            ]);
+        $response = $this->getJson(
+            "/api/vehicles/{$vehicle->id}"
+        );
+        $response->assertOk();
+        $response->assertJsonPath(
+            'data.operational_status',
+            Vehicle::OPERATIONAL_STATUS_RESERVED
+        );
+        $response->assertJsonPath(
+            'data.next_reservation.id',
+            $reservation->id
+        );
+        $response->assertJsonPath(
+            'data.next_reservation.customer.id',
+            $reservation->customer_id
+        );
+        $response->assertJsonPath('data.active_rental', null);
+    }
+
+    // Una vecchia prenotazione scaduta non rende il veicolo prenotato
+    public function test_expired_reservation_does_not_change_vehicle_status(): void
+    {
+        $this->authenticateUser();
+        $vehicle = Vehicle::factory()->create();
+        Rental::factory()
+            ->for($vehicle)
+            ->create([
+                'status' => Rental::STATUS_RESERVED,
+                'starts_at' => now()->subDays(3),
+                'expected_ends_at' => now()->subDay(),
+                'actual_starts_at' => null,
+                'actual_ends_at' => null,
+                'start_mileage' => null,
+                'end_mileage' => null,
+            ]);
+        $this->getJson("/api/vehicles/{$vehicle->id}")
+            ->assertOk()
+            ->assertJsonPath(
+                'data.operational_status',
+                Vehicle::OPERATIONAL_STATUS_AVAILABLE
+            )
+            ->assertJsonPath('data.next_reservation', null);
+    }
+
+    // Il noleggio attivo ha precedenza su una prenotazione futura
+    public function test_active_rental_has_priority_over_future_reservation(): void
+    {
+        $this->authenticateUser();
+        $vehicle = Vehicle::factory()->create();
+        $activeRental = Rental::factory()
+            ->for($vehicle)
+            ->create([
+                'status' => Rental::STATUS_ACTIVE,
+                'starts_at' => now()->subDay(),
+                'actual_starts_at' => now()->subDay(),
+                'expected_ends_at' => now()->addDay(),
+                'start_mileage' => $vehicle->mileage,
+            ]);
+        $reservation = Rental::factory()
+            ->for($vehicle)
+            ->create([
+                'status' => Rental::STATUS_RESERVED,
+                'starts_at' => now()->addDays(4),
+                'expected_ends_at' => now()->addDays(6),
+                'actual_starts_at' => null,
+                'actual_ends_at' => null,
+                'start_mileage' => null,
+                'end_mileage' => null,
+            ]);
+        $response = $this->getJson(
+            "/api/vehicles/{$vehicle->id}"
+        );
+        $response->assertOk();
+        $response->assertJsonPath(
+            'data.operational_status',
+            Vehicle::OPERATIONAL_STATUS_RENTED
+        );
+        $response->assertJsonPath(
+            'data.active_rental.id',
+            $activeRental->id
+        );
+        $response->assertJsonPath(
+            'data.next_reservation.id',
+            $reservation->id
+        );
+    }
+
+    // Crea e autentica un utente fittizio
+    private function authenticateUser(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
     }
 }
