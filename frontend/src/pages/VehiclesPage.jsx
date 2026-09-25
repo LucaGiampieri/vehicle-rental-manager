@@ -125,14 +125,25 @@ function VehiclesPage() {
 
   return (
     <>
-      <div className="d-flex flex-wrap justify-content-between gap-3 mb-4">
-        <h1 className="mb-0">Veicoli</h1>
+      <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+        <div>
+          <h1 className="mb-1">Veicoli</h1>
 
-        {!errorMessage && (
-          <span className="text-secondary align-self-center">
-            Totale: {pagination.total}
-          </span>
-        )}
+          <p className="text-secondary mb-0">
+            Consulta e gestisci tutti i mezzi registrati.
+          </p>
+        </div>
+
+        <div className="d-flex flex-wrap align-items-center gap-3">
+          {!errorMessage && (
+            <span className="text-secondary">Totale: {pagination.total}</span>
+          )}
+
+          <Link to="/vehicles/new" className="btn btn-primary">
+            <i className="bi bi-plus-lg me-2" aria-hidden="true"></i>
+            Nuovo veicolo
+          </Link>
+        </div>
       </div>
 
       <form

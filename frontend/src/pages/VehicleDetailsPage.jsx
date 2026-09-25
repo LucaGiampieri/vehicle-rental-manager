@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import Loader from "../components/Loader";
 import api from "../services/api";
 
@@ -26,6 +26,9 @@ const IMAGE_CATEGORY_LABELS = {
 function VehicleDetailsPage() {
   // Legge il parametro dinamico presente nell'indirizzo.
   const { vehicleId } = useParams();
+
+  // Permette di tornare all'elenco dopo l'eliminazione.
+  const navigate = useNavigate();
 
   // Conserva il veicolo restituito da Laravel.
   const [vehicle, setVehicle] = useState(null);
@@ -59,6 +62,12 @@ function VehicleDetailsPage() {
 
   // Conserva la descrizione inserita nel modulo.
   const [editCaption, setEditCaption] = useState("");
+
+  // Indica che l'eliminazione del veicolo è in corso.
+  const [isDeletingVehicle, setIsDeletingVehicle] = useState(false);
+
+  // Conserva un eventuale errore di eliminazione.
+  const [deleteVehicleError, setDeleteVehicleError] = useState("");
 
   // Indica che il salvataggio della modifica è in corso.
   const [isSavingImage, setIsSavingImage] = useState(false);
@@ -367,6 +376,49 @@ function VehicleDetailsPage() {
     }
   }
 
+  // Elimina definitivamente il veicolo dopo una conferma.
+  async function handleDeleteVehicle() {
+    const isConfirmed = window.confirm(
+      "Vuoi eliminare definitivamente questo veicolo? Anche tutte le sue fotografie verranno eliminate.",
+    );
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    setIsDeletingVehicle(true);
+    setDeleteVehicleError("");
+
+    try {
+      await api.delete(`/api/vehicles/${vehicle.id}`);
+
+      /*
+       * Replace impedisce di tornare con il browser
+       * alla pagina del veicolo ormai eliminato.
+       */
+      navigate("/vehicles", {
+        replace: true,
+      });
+    } catch (error) {
+      /*
+       * Laravel restituisce 409 quando il veicolo possiede
+       * noleggi, spese oppure celle dell'autorimessa.
+       */
+      if (error.response?.status === 409) {
+        setDeleteVehicleError(
+          error.response.data.message ||
+            "Il veicolo possiede dati collegati e non può essere eliminato.",
+        );
+      } else {
+        setDeleteVehicleError(
+          "Impossibile eliminare il veicolo. Riprova più tardi.",
+        );
+      }
+    } finally {
+      setIsDeletingVehicle(false);
+    }
+  }
+
   useEffect(() => {
     // Permette di annullare la richiesta quando si lascia la pagina.
     const controller = new AbortController();
@@ -467,15 +519,25 @@ function VehicleDetailsPage() {
           </p>
         </div>
 
-        <span
-          className={
-            vehicle.is_active
-              ? "badge text-bg-success fs-6"
-              : "badge text-bg-secondary fs-6"
-          }
-        >
-          {vehicle.is_active ? "Attivo" : "Disattivato"}
-        </span>
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <span
+            className={
+              vehicle.is_active
+                ? "badge text-bg-success fs-6"
+                : "badge text-bg-secondary fs-6"
+            }
+          >
+            {vehicle.is_active ? "Attivo" : "Disattivato"}
+          </span>
+
+          <Link
+            to={`/vehicles/${vehicle.id}/edit`}
+            className="btn btn-sm btn-outline-secondary"
+          >
+            <i className="bi bi-pencil me-2" aria-hidden="true"></i>
+            Modifica veicolo
+          </Link>
+        </div>
       </div>
 
       {/* Fotografia principale oppure segnaposto. */}
@@ -1000,6 +1062,55 @@ function VehicleDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Operazione distruttiva mantenuta separata dalle azioni normali. */}
+      <section
+        className="card border-danger-subtle shadow-sm mb-4"
+        aria-labelledby="delete-vehicle-title"
+      >
+        <div className="card-body p-4">
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+              <h2 id="delete-vehicle-title" className="h5 text-danger mb-1">
+                Elimina veicolo
+              </h2>
+
+              <p className="text-secondary mb-0">
+                L’eliminazione è possibile solamente se il veicolo non possiede
+                noleggi, spese o posti occupati.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-outline-danger"
+              disabled={isDeletingVehicle}
+              onClick={handleDeleteVehicle}
+            >
+              {isDeletingVehicle ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2"
+                    aria-hidden="true"
+                  ></span>
+                  Eliminazione...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-trash me-2" aria-hidden="true"></i>
+                  Elimina veicolo
+                </>
+              )}
+            </button>
+          </div>
+
+          {deleteVehicleError && (
+            <div className="alert alert-danger mt-3 mb-0" role="alert">
+              {deleteVehicleError}
+            </div>
+          )}
+        </div>
+      </section>
     </>
   );
 }
