@@ -3,16 +3,17 @@
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexCustomerRequest extends FormRequest
 {
-    // Permette la richiesta agli utenti autenticati
+    // Permette la richiesta agli utenti autenticati.
     public function authorize(): bool
     {
         return true;
     }
 
-    // Normalizza i filtri ricevuti dalla query string
+    // Normalizza i filtri ricevuti dalla query string.
     protected function prepareForValidation(): void
     {
         $normalizedData = [];
@@ -50,7 +51,7 @@ class IndexCustomerRequest extends FormRequest
         }
     }
 
-    // Definisce i filtri accettati dall’elenco dei clienti
+    // Definisce filtri e ordinamenti accettati dall’elenco clienti.
     public function rules(): array
     {
         return [
@@ -63,6 +64,16 @@ class IndexCustomerRequest extends FormRequest
             'is_active' => [
                 'sometimes',
                 'boolean',
+            ],
+            'sort' => [
+                'sometimes',
+                Rule::in([
+                    'activity_desc',
+                    'name_asc',
+                    'name_desc',
+                    'newest',
+                    'rentals_desc',
+                ]),
             ],
             'per_page' => [
                 'sometimes',

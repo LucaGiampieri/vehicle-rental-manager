@@ -6,14 +6,18 @@ use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Customer extends Model
 {
-    // Permette di creare clienti fittizi attraverso CustomerFactory
-    /** @use HasFactory<CustomerFactory> */
+    /**
+     * Permette di creare clienti fittizi attraverso CustomerFactory.
+     *
+     * @use HasFactory<CustomerFactory>
+     */
     use HasFactory;
 
-    // Elenca i campi che possono essere assegnati in modo controllato
+    // Elenca i campi assegnabili in modo controllato.
     protected $fillable = [
         'first_name',
         'last_name',
@@ -28,25 +32,48 @@ class Customer extends Model
         'is_active',
     ];
 
-    // Converte automaticamente alcuni valori del database nei tipi PHP corretti
+    // Converte automaticamente i valori nei tipi PHP corretti.
     protected function casts(): array
     {
         return [
-            // Converte le date in oggetti Carbon
             'birth_date' => 'date',
             'driving_license_expiry_date' => 'date',
-
-            // Converte 0 e 1 del database in false e true
             'is_active' => 'boolean',
         ];
     }
 
-    // Restituisce tutti i noleggi appartenenti al cliente.
-
-    // Relazione uno a molti (1:N):
-    // un cliente può effettuare molti noleggi, mentre ogni noleggio appartiene a un solo cliente
+    /*
+     * Relazione uno a molti:
+     * un cliente può avere numerosi noleggi.
+     */
     public function rentals(): HasMany
     {
         return $this->hasMany(Rental::class);
+    }
+
+    /*
+     * Restituisce l’eventuale noleggio attualmente in corso.
+     *
+     * In una situazione corretta dovrebbe esistere al massimo
+     * un noleggio attivo per ogni cliente.
+     */
+    public function activeRental(): HasOne
+    {
+        return $this->hasOne(Rental::class)
+            ->where('status', Rental::STATUS_ACTIVE)
+            ->latest('actual_starts_at');
+    }
+
+    /*
+     * Restituisce la prenotazione futura più vicina.
+     *
+     * Le prenotazioni già iniziate o scadute non vengono considerate.
+     */
+    public function nextReservation(): HasOne
+    {
+        return $this->hasOne(Rental::class)
+            ->where('status', Rental::STATUS_RESERVED)
+            ->where('starts_at', '>=', now())
+            ->oldest('starts_at');
     }
 }

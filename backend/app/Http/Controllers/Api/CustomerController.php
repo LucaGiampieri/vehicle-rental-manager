@@ -8,6 +8,7 @@ use App\Http\Requests\Api\StoreCustomerRequest;
 use App\Http\Requests\Api\UpdateCustomerRequest;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
+use App\Models\Rental;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -22,9 +23,27 @@ class CustomerController extends Controller
         // Recupera esclusivamente i filtri validati
         $filters = $request->validated();
 
-        // Prepara la query e aggiunge il conteggio dei noleggi
+        /*
+ * Prepara la query aggiungendo:
+ * - numero complessivo dei noleggi;
+ * - data dell’ultima attività non annullata.
+ */
         $query = Customer::query()
-            ->withCount('rentals');
+            ->withCount('rentals')
+            ->withMax(
+                [
+                    'rentals as latest_rental_activity_at' => function (
+                        Builder $query
+                    ): void {
+                        $query->where(
+                            'status',
+                            '!=',
+                            Rental::STATUS_CANCELLED
+                        );
+                    },
+                ],
+                'starts_at'
+            );
 
         /*
          * Cerca nome, cognome, email, telefono,
@@ -84,9 +103,36 @@ class CustomerController extends Controller
         // Permette di scegliere la dimensione della pagina
         $perPage = $filters['per_page'] ?? 15;
 
+        /*
+ * Applica l’ordinamento scelto.
+ *
+ * Se il frontend non specifica nulla, vengono mostrati prima
+ * i clienti con l’attività più recente.
+ */
+        match ($filters['sort'] ?? 'activity_desc') {
+            'name_asc' => $query
+                ->orderBy('last_name')
+                ->orderBy('first_name'),
+
+            'name_desc' => $query
+                ->orderByDesc('last_name')
+                ->orderByDesc('first_name'),
+
+            'newest' => $query
+                ->orderByDesc('created_at')
+                ->orderByDesc('id'),
+
+            'rentals_desc' => $query
+                ->orderByDesc('rentals_count')
+                ->orderBy('last_name')
+                ->orderBy('first_name'),
+
+            default => $query
+                ->orderByDesc('latest_rental_activity_at')
+                ->orderByDesc('id'),
+        };
+
         $customers = $query
-            ->orderBy('last_name')
-            ->orderBy('first_name')
             ->paginate($perPage)
             ->withQueryString();
 
@@ -113,11 +159,116 @@ class CustomerController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    // Restituisce un singolo cliente
+    // Restituisce la scheda completa di un singolo cliente.
     public function show(Customer $customer): CustomerResource
     {
-        // Carica il conteggio dei noleggi collegati al cliente
-        $customer->loadCount('rentals');
+        /*
+         * Rilegge il cliente caricando:
+         * - noleggio attualmente attivo;
+         * - prossima prenotazione;
+         * - veicoli collegati;
+         * - conteggi suddivisi per stato;
+         * - riepilogo economico.
+         */
+        $customer = Customer::query()
+            ->with([
+                'activeRental.vehicle',
+                'nextReservation.vehicle',
+            ])
+            ->withCount([
+                'rentals',
+
+                'rentals as reserved_rentals_count' => function (
+                    Builder $query
+                ): void {
+                    $query->where(
+                        'status',
+                        Rental::STATUS_RESERVED
+                    );
+                },
+
+                'rentals as active_rentals_count' => function (
+                    Builder $query
+                ): void {
+                    $query->where(
+                        'status',
+                        Rental::STATUS_ACTIVE
+                    );
+                },
+
+                'rentals as completed_rentals_count' => function (
+                    Builder $query
+                ): void {
+                    $query->where(
+                        'status',
+                        Rental::STATUS_COMPLETED
+                    );
+                },
+
+                'rentals as cancelled_rentals_count' => function (
+                    Builder $query
+                ): void {
+                    $query->where(
+                        'status',
+                        Rental::STATUS_CANCELLED
+                    );
+                },
+            ])
+            ->withSum(
+                [
+                    'rentals as completed_rentals_total' => function (
+                        Builder $query
+                    ): void {
+                        $query->where(
+                            'status',
+                            Rental::STATUS_COMPLETED
+                        );
+                    },
+                ],
+                'total_amount'
+            )
+            ->withSum(
+                [
+                    'rentals as open_rentals_total' => function (
+                        Builder $query
+                    ): void {
+                        $query->whereIn('status', [
+                            Rental::STATUS_RESERVED,
+                            Rental::STATUS_ACTIVE,
+                        ]);
+                    },
+                ],
+                'total_amount'
+            )
+            ->withSum(
+                [
+                    'rentals as non_cancelled_rentals_total' => function (
+                        Builder $query
+                    ): void {
+                        $query->where(
+                            'status',
+                            '!=',
+                            Rental::STATUS_CANCELLED
+                        );
+                    },
+                ],
+                'total_amount'
+            )
+            ->withSum(
+                [
+                    'rentals as paid_rentals_total' => function (
+                        Builder $query
+                    ): void {
+                        $query->where(
+                            'status',
+                            '!=',
+                            Rental::STATUS_CANCELLED
+                        );
+                    },
+                ],
+                'amount_paid'
+            )
+            ->findOrFail($customer->id);
 
         return new CustomerResource($customer);
     }

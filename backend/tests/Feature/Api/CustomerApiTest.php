@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Customer;
 use App\Models\Rental;
 use App\Models\User;
+use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -125,6 +126,145 @@ class CustomerApiTest extends TestCase
         );
     }
 
+    // Verifica gli ordinamenti disponibili nell’elenco clienti.
+    public function test_customers_can_be_sorted(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $rossi = Customer::factory()->create([
+            'first_name' => 'Mario',
+            'last_name' => 'Rossi',
+            'created_at' => now()->subDays(3),
+        ]);
+
+        $bianchi = Customer::factory()->create([
+            'first_name' => 'Luca',
+            'last_name' => 'Bianchi',
+            'created_at' => now()->subDay(),
+        ]);
+
+        $verdi = Customer::factory()->create([
+            'first_name' => 'Anna',
+            'last_name' => 'Verdi',
+            'created_at' => now(),
+        ]);
+
+        /*
+         * Rossi possiede due noleggi, ma entrambi meno recenti
+         * rispetto al noleggio di Bianchi.
+         */
+        Rental::factory()
+            ->count(2)
+            ->for($rossi)
+            ->create([
+                'status' => Rental::STATUS_COMPLETED,
+                'starts_at' => now()->subDays(20),
+                'actual_starts_at' => now()->subDays(20),
+                'expected_ends_at' => now()->subDays(18),
+                'actual_ends_at' => now()->subDays(18),
+            ]);
+
+        /*
+         * Bianchi possiede un solo noleggio, ma è quello
+         * con la data di inizio più recente.
+         */
+        Rental::factory()
+            ->for($bianchi)
+            ->create([
+                'status' => Rental::STATUS_COMPLETED,
+                'starts_at' => now()->subDays(2),
+                'actual_starts_at' => now()->subDays(2),
+                'expected_ends_at' => now()->subDay(),
+                'actual_ends_at' => now()->subDay(),
+            ]);
+
+        /*
+         * Controlla l’attività più recente:
+         * Bianchi deve comparire prima di Rossi.
+         *
+         * Verdi è il cliente inserito più recentemente,
+         * ma non possiede alcun noleggio.
+         */
+        $activityResponse = $this->getJson(
+            '/api/customers?sort=activity_desc'
+        );
+
+        $activityResponse->assertOk();
+        $activityResponse->assertJsonPath(
+            'data.0.id',
+            $bianchi->id
+        );
+        $activityResponse->assertJsonPath(
+            'data.1.id',
+            $rossi->id
+        );
+
+        // Controlla l’ordine alfabetico crescente.
+        $alphabeticalResponse = $this->getJson(
+            '/api/customers?sort=name_asc'
+        );
+
+        $alphabeticalResponse->assertOk();
+        $alphabeticalResponse->assertJsonPath(
+            'data.0.id',
+            $bianchi->id
+        );
+        $alphabeticalResponse->assertJsonPath(
+            'data.1.id',
+            $rossi->id
+        );
+        $alphabeticalResponse->assertJsonPath(
+            'data.2.id',
+            $verdi->id
+        );
+
+        // Controlla l’ordine alfabetico decrescente.
+        $reverseResponse = $this->getJson(
+            '/api/customers?sort=name_desc'
+        );
+
+        $reverseResponse->assertOk();
+        $reverseResponse->assertJsonPath(
+            'data.0.id',
+            $verdi->id
+        );
+        $reverseResponse->assertJsonPath(
+            'data.1.id',
+            $rossi->id
+        );
+        $reverseResponse->assertJsonPath(
+            'data.2.id',
+            $bianchi->id
+        );
+
+        // Controlla che venga mostrato prima chi possiede più noleggi.
+        $rentalsResponse = $this->getJson(
+            '/api/customers?sort=rentals_desc'
+        );
+
+        $rentalsResponse->assertOk();
+        $rentalsResponse->assertJsonPath(
+            'data.0.id',
+            $rossi->id
+        );
+        $rentalsResponse->assertJsonPath(
+            'data.0.rentals_count',
+            2
+        );
+
+        // Controlla che venga mostrato prima il cliente appena inserito.
+        $newestResponse = $this->getJson(
+            '/api/customers?sort=newest'
+        );
+
+        $newestResponse->assertOk();
+        $newestResponse->assertJsonPath(
+            'data.0.id',
+            $verdi->id
+        );
+    }
+
     // Verifica la paginazione configurabile dei clienti
     public function test_customer_list_supports_custom_pagination(): void
     {
@@ -155,7 +295,7 @@ class CustomerApiTest extends TestCase
         $search = str_repeat('A', 101);
 
         $response = $this->getJson(
-            "/api/customers?search={$search}&is_active=maybe&per_page=101"
+            "/api/customers?search={$search}&is_active=maybe&sort=unknown&per_page=101"
         );
 
         $response->assertUnprocessable();
@@ -163,6 +303,7 @@ class CustomerApiTest extends TestCase
         $response->assertJsonValidationErrors([
             'search',
             'is_active',
+            'sort',
             'per_page',
         ]);
     }
@@ -272,6 +413,148 @@ class CustomerApiTest extends TestCase
             'CD987654E'
         );
         $response->assertJsonPath('data.rentals_count', 0);
+    }
+
+    // Verifica riepilogo operativo ed economico della scheda cliente.
+    public function test_customer_detail_includes_rental_and_financial_summary(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $customer = Customer::factory()->create();
+
+        $completedVehicle = Vehicle::factory()->create();
+        $activeVehicle = Vehicle::factory()->create();
+        $reservedVehicle = Vehicle::factory()->create();
+        $cancelledVehicle = Vehicle::factory()->create();
+
+        // Noleggio concluso e completamente pagato.
+        Rental::factory()
+            ->for($customer)
+            ->for($completedVehicle)
+            ->create([
+                'status' => Rental::STATUS_COMPLETED,
+                'starts_at' => now()->subMonths(2),
+                'actual_starts_at' => now()->subMonths(2),
+                'expected_ends_at' => now()->subMonths(2)->addDays(3),
+                'actual_ends_at' => now()->subMonths(2)->addDays(3),
+                'total_amount' => '300.00',
+                'amount_paid' => '300.00',
+            ]);
+
+        // Noleggio attualmente in corso.
+        $activeRental = Rental::factory()
+            ->for($customer)
+            ->for($activeVehicle)
+            ->create([
+                'status' => Rental::STATUS_ACTIVE,
+                'starts_at' => now()->subDay(),
+                'actual_starts_at' => now()->subDay(),
+                'expected_ends_at' => now()->addDays(4),
+                'actual_ends_at' => null,
+                'total_amount' => '500.00',
+                'amount_paid' => '200.00',
+            ]);
+
+        // Prossima prenotazione futura.
+        $reservedRental = Rental::factory()
+            ->for($customer)
+            ->for($reservedVehicle)
+            ->create([
+                'status' => Rental::STATUS_RESERVED,
+                'starts_at' => now()->addDays(10),
+                'actual_starts_at' => null,
+                'expected_ends_at' => now()->addDays(15),
+                'actual_ends_at' => null,
+                'total_amount' => '400.00',
+                'amount_paid' => '100.00',
+            ]);
+
+        // Il noleggio annullato deve restare nello storico,
+        // ma non deve influenzare i totali economici.
+        Rental::factory()
+            ->for($customer)
+            ->for($cancelledVehicle)
+            ->create([
+                'status' => Rental::STATUS_CANCELLED,
+                'starts_at' => now()->addMonth(),
+                'actual_starts_at' => null,
+                'expected_ends_at' => now()->addMonth()->addDays(3),
+                'actual_ends_at' => null,
+                'total_amount' => '900.00',
+                'amount_paid' => '0.00',
+            ]);
+
+        $response = $this->getJson(
+            "/api/customers/{$customer->id}"
+        );
+
+        $response->assertOk();
+
+        // Verifica i conteggi suddivisi per stato.
+        $response->assertJsonPath(
+            'data.rental_summary.total',
+            4
+        );
+        $response->assertJsonPath(
+            'data.rental_summary.reserved',
+            1
+        );
+        $response->assertJsonPath(
+            'data.rental_summary.active',
+            1
+        );
+        $response->assertJsonPath(
+            'data.rental_summary.completed',
+            1
+        );
+        $response->assertJsonPath(
+            'data.rental_summary.cancelled',
+            1
+        );
+
+        /*
+         * Noleggi conclusi: 300 euro.
+         * Impegni aperti: 500 + 400 = 900 euro.
+         * Pagato: 300 + 200 + 100 = 600 euro.
+         * Da saldare: 1200 - 600 = 600 euro.
+         */
+        $response->assertJsonPath(
+            'data.financial_summary.completed_total',
+            '300.00'
+        );
+        $response->assertJsonPath(
+            'data.financial_summary.open_total',
+            '900.00'
+        );
+        $response->assertJsonPath(
+            'data.financial_summary.paid_total',
+            '600.00'
+        );
+        $response->assertJsonPath(
+            'data.financial_summary.balance_due',
+            '600.00'
+        );
+
+        // Verifica il noleggio attualmente attivo.
+        $response->assertJsonPath(
+            'data.active_rental.id',
+            $activeRental->id
+        );
+        $response->assertJsonPath(
+            'data.active_rental.vehicle.id',
+            $activeVehicle->id
+        );
+
+        // Verifica la prenotazione futura più vicina.
+        $response->assertJsonPath(
+            'data.next_reservation.id',
+            $reservedRental->id
+        );
+        $response->assertJsonPath(
+            'data.next_reservation.vehicle.id',
+            $reservedVehicle->id
+        );
     }
 
     // Verifica che un utente autenticato possa modificare un cliente
