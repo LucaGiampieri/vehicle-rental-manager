@@ -3,6 +3,8 @@ import AuthProvider from "./context/AuthProvider";
 import RequireAuth from "./components/RequireAuth";
 import DefaultLayout from "./layouts/DefaultLayout";
 import DashboardPage from "./pages/DashboardPage";
+import CustomersPage from "./pages/CustomersPage";
+import CustomerDetailsPage from "./pages/CustomerDetailsPage";
 import VehiclesPage from "./pages/VehiclesPage";
 import NewVehiclePage from "./pages/NewVehiclePage";
 import EditVehiclePage from "./pages/EditVehiclePage";
@@ -23,6 +25,11 @@ function App() {
           <Route element={<RequireAuth />}>
             <Route element={<DefaultLayout />}>
               <Route index element={<DashboardPage />} />
+              <Route path="customers" element={<CustomersPage />} />
+              <Route
+                path="customers/:customerId/:customerSlug?"
+                element={<CustomerDetailsPage />}
+              />
               <Route path="vehicles" element={<VehiclesPage />} />
               <Route path="vehicles/new" element={<NewVehiclePage />} />
               <Route

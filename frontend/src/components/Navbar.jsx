@@ -69,6 +69,18 @@ function Navbar() {
             <i className="bi bi-car-front" aria-hidden="true"></i>
             Veicoli
           </NavLink>
+
+          <NavLink
+            to="/customers"
+            className={({ isActive }) =>
+              `app-navigation__link ${
+                isActive ? "app-navigation__link--active" : ""
+              }`
+            }
+          >
+            <i className="bi bi-people" aria-hidden="true"></i>
+            Clienti
+          </NavLink>
         </nav>
 
         {/* Informazioni dell'utente autenticato. */}
