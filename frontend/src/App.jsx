@@ -5,6 +5,8 @@ import DefaultLayout from "./layouts/DefaultLayout";
 import DashboardPage from "./pages/DashboardPage";
 import CustomersPage from "./pages/CustomersPage";
 import CustomerDetailsPage from "./pages/CustomerDetailsPage";
+import NewCustomerPage from "./pages/NewCustomerPage";
+import EditCustomerPage from "./pages/EditCustomerPage";
 import VehiclesPage from "./pages/VehiclesPage";
 import NewVehiclePage from "./pages/NewVehiclePage";
 import EditVehiclePage from "./pages/EditVehiclePage";
@@ -26,6 +28,11 @@ function App() {
             <Route element={<DefaultLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="customers" element={<CustomersPage />} />
+              <Route path="customers/new" element={<NewCustomerPage />} />
+              <Route
+                path="customers/:customerId/edit"
+                element={<EditCustomerPage />}
+              />
               <Route
                 path="customers/:customerId/:customerSlug?"
                 element={<CustomerDetailsPage />}

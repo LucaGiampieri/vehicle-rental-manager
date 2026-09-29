@@ -113,6 +113,7 @@ class UpdateCustomerRequest extends FormRequest
                 'nullable',
                 'date_format:Y-m-d',
                 'before_or_equal:today',
+                'before_or_equal:-18 years',
             ],
             'email' => [
                 'sometimes',
@@ -147,6 +148,7 @@ class UpdateCustomerRequest extends FormRequest
                 'sometimes',
                 'required',
                 'date_format:Y-m-d',
+                'after_or_equal:today',
             ],
             'address' => [
                 'sometimes',

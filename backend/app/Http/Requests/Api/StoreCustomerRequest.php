@@ -98,10 +98,12 @@ class StoreCustomerRequest extends FormRequest
             ],
 
             // La data di nascita è facoltativa ma non può essere futura
+            // e miniro di 18 anni
             'birth_date' => [
                 'nullable',
                 'date_format:Y-m-d',
                 'before_or_equal:today',
+                'before_or_equal:-18 years',
             ],
 
             // L'email è facoltativa ma non può essere duplicata
@@ -140,6 +142,7 @@ class StoreCustomerRequest extends FormRequest
             'driving_license_expiry_date' => [
                 'required',
                 'date_format:Y-m-d',
+                'after_or_equal:today',
             ],
 
             // Indirizzo e note possono essere aggiunti successivamente

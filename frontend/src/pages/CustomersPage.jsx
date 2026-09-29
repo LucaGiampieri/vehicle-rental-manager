@@ -135,7 +135,7 @@ function CustomersPage() {
   return (
     <>
       {/* Intestazione principale della sezione clienti. */}
-      <header className="page-header">
+      <header className="page-header d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
           <span className="page-eyebrow">Anagrafica</span>
 
@@ -146,11 +146,18 @@ function CustomersPage() {
           </p>
         </div>
 
-        {!errorMessage && (
-          <span className="text-secondary">
-            Totale: <strong>{pagination.total}</strong>
-          </span>
-        )}
+        <div className="d-flex flex-wrap align-items-center gap-3">
+          {!errorMessage && (
+            <span className="text-secondary">
+              Totale: <strong>{pagination.total}</strong>
+            </span>
+          )}
+
+          <Link to="/customers/new" className="btn btn-primary">
+            <i className="bi bi-person-plus me-2" aria-hidden="true"></i>
+            Nuovo cliente
+          </Link>
+        </div>
       </header>
 
       {/* Ricerca e filtro vengono inviati tramite questo form. */}

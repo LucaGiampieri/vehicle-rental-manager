@@ -276,15 +276,25 @@ function CustomerDetailsPage() {
           </p>
         </div>
 
-        <span
-          className={
-            customer.is_active
-              ? "badge text-bg-success fs-6"
-              : "badge text-bg-secondary fs-6"
-          }
-        >
-          {customer.is_active ? "Cliente attivo" : "Cliente disattivato"}
-        </span>
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <span
+            className={
+              customer.is_active
+                ? "badge text-bg-success fs-6"
+                : "badge text-bg-secondary fs-6"
+            }
+          >
+            {customer.is_active ? "Cliente attivo" : "Cliente disattivato"}
+          </span>
+
+          <Link
+            to={`/customers/${customer.id}/edit`}
+            className="btn btn-outline-primary"
+          >
+            <i className="bi bi-pencil-square me-2" aria-hidden="true"></i>
+            Modifica
+          </Link>
+        </div>
       </header>
 
       {/* Noleggio corrente e prossima prenotazione. */}

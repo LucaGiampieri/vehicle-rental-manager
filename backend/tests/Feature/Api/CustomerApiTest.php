@@ -776,4 +776,62 @@ class CustomerApiTest extends TestCase
             'customer_id' => $customer->id,
         ]);
     }
+
+    // Impedisce la registrazione di un cliente minorenne.
+    public function test_customer_must_be_at_least_eighteen_years_old(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/customers', [
+            'first_name' => 'Mario',
+            'last_name' => 'Rossi',
+            'birth_date' => now()
+                ->subYears(17)
+                ->format('Y-m-d'),
+            'driving_license_number' => 'TEST-MINORENNE-001',
+            'driving_license_expiry_date' => now()
+                ->addYears(5)
+                ->format('Y-m-d'),
+            'is_active' => true,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors([
+            'birth_date',
+        ]);
+
+        $this->assertDatabaseMissing('customers', [
+            'driving_license_number' => 'TEST-MINORENNE-001',
+        ]);
+    }
+
+    // Impedisce la registrazione di un cliente con patente scaduta.
+    public function test_customer_cannot_have_an_expired_driving_license(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/customers', [
+            'first_name' => 'Anna',
+            'last_name' => 'Verdi',
+            'birth_date' => now()
+                ->subYears(30)
+                ->format('Y-m-d'),
+            'driving_license_number' => 'TEST-SCADUTA-001',
+            'driving_license_expiry_date' => now()
+                ->subDay()
+                ->format('Y-m-d'),
+            'is_active' => true,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors([
+            'driving_license_expiry_date',
+        ]);
+
+        $this->assertDatabaseMissing('customers', [
+            'driving_license_number' => 'TEST-SCADUTA-001',
+        ]);
+    }
 }
