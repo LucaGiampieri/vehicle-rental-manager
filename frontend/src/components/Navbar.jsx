@@ -59,6 +59,18 @@ function Navbar() {
           </NavLink>
 
           <NavLink
+            to="/rentals"
+            className={({ isActive }) =>
+              `app-navigation__link ${
+                isActive ? "app-navigation__link--active" : ""
+              }`
+            }
+          >
+            <i className="bi bi-calendar2-check" aria-hidden="true"></i>
+            Noleggi
+          </NavLink>
+
+          <NavLink
             to="/vehicles"
             className={({ isActive }) =>
               `app-navigation__link ${

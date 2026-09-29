@@ -38,16 +38,22 @@ class RentalResource extends JsonResource
             ),
             'total_amount' => $this->total_amount,
             'amount_paid' => $this->amount_paid,
-            'balance_due' => number_format(
-                max(
-                    0,
-                    (float) $this->total_amount
-                    - (float) $this->amount_paid
+            /*
+ * Una prenotazione annullata non possiede un saldo da incassare.
+ * Il totale rimane disponibile come valore storico della prenotazione.
+ */
+            'balance_due' => $this->status === Rental::STATUS_CANCELLED
+                ? '0.00'
+                : number_format(
+                    max(
+                        0,
+                        (float) $this->total_amount
+                        - (float) $this->amount_paid
+                    ),
+                    2,
+                    '.',
+                    ''
                 ),
-                2,
-                '.',
-                ''
-            ),
 
             // Chilometraggi alla consegna e al rientro
             'start_mileage' => $this->start_mileage,

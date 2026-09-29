@@ -1278,4 +1278,31 @@ class RentalApiTest extends TestCase
 
         Sanctum::actingAs($user);
     }
+
+    // Un noleggio annullato conserva il totale storico ma non ha saldo dovuto.
+    public function test_cancelled_rental_has_no_balance_due(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $rental = Rental::factory()->create([
+            'status' => Rental::STATUS_CANCELLED,
+            'total_amount' => '240.00',
+            'amount_paid' => '0.00',
+        ]);
+
+        $response = $this->getJson(
+            "/api/rentals/{$rental->id}"
+        );
+
+        $response->assertOk();
+        $response->assertJsonPath(
+            'data.total_amount',
+            '240.00'
+        );
+        $response->assertJsonPath(
+            'data.balance_due',
+            '0.00'
+        );
+    }
 }
