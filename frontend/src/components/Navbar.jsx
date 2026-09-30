@@ -83,6 +83,18 @@ function Navbar() {
           </NavLink>
 
           <NavLink
+            to="/expenses"
+            className={({ isActive }) =>
+              `app-navigation__link ${
+                isActive ? "app-navigation__link--active" : ""
+              }`
+            }
+          >
+            <i className="bi bi-receipt" aria-hidden="true"></i>
+            Spese
+          </NavLink>
+
+          <NavLink
             to="/customers"
             className={({ isActive }) =>
               `app-navigation__link ${

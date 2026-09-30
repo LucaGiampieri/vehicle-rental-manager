@@ -7,6 +7,10 @@ import RentalsPage from "./pages/RentalsPage";
 import NewRentalPage from "./pages/NewRentalPage";
 import RentalDetailsPage from "./pages/RentalDetailsPage";
 import EditRentalPage from "./pages/EditRentalPage";
+import ExpensesPage from "./pages/ExpensesPage";
+import NewExpensePage from "./pages/NewExpensePage";
+import EditExpensePage from "./pages/EditExpensePage";
+import ExpenseDetailsPage from "./pages/ExpenseDetailsPage";
 import CustomersPage from "./pages/CustomersPage";
 import CustomerDetailsPage from "./pages/CustomerDetailsPage";
 import NewCustomerPage from "./pages/NewCustomerPage";
@@ -40,6 +44,16 @@ function App() {
               <Route
                 path="rentals/:rentalId"
                 element={<RentalDetailsPage />}
+              />
+              <Route path="expenses" element={<ExpensesPage />} />
+              <Route path="expenses/new" element={<NewExpensePage />} />
+              <Route
+                path="expenses/:expenseId/edit"
+                element={<EditExpensePage />}
+              />
+              <Route
+                path="expenses/:expenseId"
+                element={<ExpenseDetailsPage />}
               />
               <Route path="customers" element={<CustomersPage />} />
               <Route path="customers/new" element={<NewCustomerPage />} />
