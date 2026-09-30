@@ -49,6 +49,7 @@ function getFirstValidationError(error) {
 function RentalDetailsPage() {
   const { rentalId } = useParams();
 
+  // Dati principali della pagina e stato comune a tutte le operazioni.
   const [rental, setRental] = useState(null);
   const [parkingSpaces, setParkingSpaces] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,12 +84,17 @@ function RentalDetailsPage() {
     const loadedRental = response.data.data;
 
     setRental(loadedRental);
+    // Alla consegna propone i km attuali del mezzo se non sono ancora salvati.
     setActivationValues({
       start_mileage:
         loadedRental.start_mileage ?? loadedRental.vehicle?.mileage ?? "",
       amount_paid: loadedRental.amount_paid ?? "0.00",
       notes: loadedRental.notes ?? "",
     });
+    /*
+     * Al rientro propone i km iniziali come base di confronto e l'importo
+     * totale come pagamento. L'operatore può comunque correggere entrambi.
+     */
     setCompletionValues({
       end_mileage:
         loadedRental.end_mileage ?? loadedRental.start_mileage ?? "",
@@ -105,6 +111,7 @@ function RentalDetailsPage() {
     });
   }
 
+  // Primo caricamento della scheda e delle celle disponibili in autorimessa.
   useEffect(() => {
     const controller = new AbortController();
 
@@ -127,6 +134,7 @@ function RentalDetailsPage() {
         setRental(loadedRental);
         setParkingSpaces(spacesResponse.data.data);
 
+        // Inizializza i tre moduli operativi con i dati ricevuti dall'API.
         setActivationValues({
           start_mileage:
             loadedRental.start_mileage ?? loadedRental.vehicle?.mileage ?? "",
@@ -188,6 +196,7 @@ function RentalDetailsPage() {
   function handleActivate(event) {
     event.preventDefault();
 
+    // La consegna trasforma una prenotazione in un noleggio attivo.
     performAction(
       () =>
         api.patch(`/api/rentals/${rentalId}/activate`, {
@@ -202,6 +211,7 @@ function RentalDetailsPage() {
   function handleComplete(event) {
     event.preventDefault();
 
+    // Il rientro registra km finali, incasso totale e collocazione del mezzo.
     const payload = {
       end_mileage: Number(completionValues.end_mileage),
       amount_paid: completionValues.amount_paid || 0,
@@ -222,6 +232,7 @@ function RentalDetailsPage() {
   function handleAccountingUpdate(event) {
     event.preventDefault();
 
+    // Consente di correggere incasso e note senza alterare il periodo.
     performAction(
       () =>
         api.patch(`/api/rentals/${rentalId}`, {
@@ -233,6 +244,7 @@ function RentalDetailsPage() {
   }
 
   function handleCancel() {
+    // La conferma protegge dall'annullamento involontario della prenotazione.
     const confirmed = window.confirm(
       "Vuoi davvero annullare questa prenotazione? L'operazione resterà nello storico.",
     );
@@ -253,6 +265,7 @@ function RentalDetailsPage() {
     return <div className="alert alert-danger">{errorMessage}</div>;
   }
 
+  // Valori derivati usati in più sezioni della scheda.
   const status = RENTAL_STATUS[rental.status] ?? RENTAL_STATUS.reserved;
   const balanceDue = Number(rental.balance_due ?? 0);
   const isCancelled = rental.status === "cancelled";
@@ -275,6 +288,7 @@ function RentalDetailsPage() {
 
   return (
     <>
+      {/* Navigazione di ritorno all'elenco generale. */}
       <Link
         to="/rentals"
         className="btn btn-link text-secondary text-decoration-none px-0 mb-3"

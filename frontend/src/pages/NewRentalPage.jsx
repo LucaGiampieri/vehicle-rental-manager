@@ -5,6 +5,7 @@ import RentalForm from "../components/RentalForm";
 import api from "../services/api";
 
 // Valori iniziali utilizzati dal form della nuova prenotazione.
+// Le stringhe vuote permettono di usare tutti i campi come input controllati.
 const INITIAL_VALUES = {
   customer_id: "",
   vehicle_id: "",
@@ -22,7 +23,7 @@ function NewRentalPage() {
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
 
-  // Conserva i valori e gli errori del form.
+  // Conserva i valori inseriti e gli errori restituiti dalla validazione API.
   const [values, setValues] = useState(INITIAL_VALUES);
   const [fieldErrors, setFieldErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
@@ -43,6 +44,7 @@ function NewRentalPage() {
       setErrorMessage("");
 
       try {
+        // Le due richieste indipendenti vengono eseguite contemporaneamente.
         const [customersResponse, vehiclesResponse] = await Promise.all([
           api.get("/api/customers", {
             params: {
@@ -97,6 +99,7 @@ function NewRentalPage() {
           (vehicle) => String(vehicle.id) === String(value),
         );
 
+        // La tariffa attuale viene proposta, ma rimane modificabile.
         nextValues.daily_rate = selectedVehicle?.daily_rate ?? "";
       }
 
@@ -124,6 +127,7 @@ function NewRentalPage() {
     setErrorMessage("");
     setFieldErrors({});
 
+    // Converte gli identificativi in numeri e le date locali in formato ISO.
     const payload = {
       vehicle_id: Number(values.vehicle_id),
       customer_id: Number(values.customer_id),
@@ -139,6 +143,7 @@ function NewRentalPage() {
     };
 
     try {
+      // Laravel ricontrolla disponibilità, patente, date e importi.
       await api.post("/api/rentals", payload);
 
       // Dopo la creazione torna all'elenco operativo dei noleggi.

@@ -18,7 +18,7 @@ function EditRentalPage() {
   const { rentalId } = useParams();
   const navigate = useNavigate();
 
-  // Conserva il noleggio e le opzioni disponibili nei menu.
+  // Conserva il noleggio originale e le opzioni disponibili nei menu.
   const [rental, setRental] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -48,6 +48,7 @@ function EditRentalPage() {
 
     async function loadPage() {
       try {
+        // Le tre richieste indipendenti vengono eseguite contemporaneamente.
         const [rentalResponse, customersResponse, vehiclesResponse] =
           await Promise.all([
             api.get(`/api/rentals/${rentalId}`, {
@@ -65,6 +66,7 @@ function EditRentalPage() {
 
         const loadedRental = rentalResponse.data.data;
 
+        // Conserva l'originale e prepara i valori compatibili con il form.
         setRental(loadedRental);
         setCustomers(customersResponse.data.data);
         setVehicles(vehiclesResponse.data.data);
@@ -106,6 +108,7 @@ function EditRentalPage() {
         const selectedVehicle = vehicles.find(
           (vehicle) => String(vehicle.id) === String(value),
         );
+        // Cambiando mezzo viene proposta la sua tariffa corrente.
         nextValues.daily_rate = selectedVehicle?.daily_rate ?? "";
       }
 
@@ -126,6 +129,7 @@ function EditRentalPage() {
     setErrorMessage("");
     setFieldErrors({});
 
+    // Prepara tipi e date nel formato previsto dall'API Laravel.
     const payload = {
       vehicle_id: Number(values.vehicle_id),
       customer_id: Number(values.customer_id),
@@ -141,6 +145,7 @@ function EditRentalPage() {
     };
 
     try {
+      // Il backend impedisce modifiche non ammesse a noleggi già iniziati.
       await api.patch(`/api/rentals/${rentalId}`, payload);
       navigate(`/rentals/${rentalId}`, { replace: true });
     } catch (error) {

@@ -42,6 +42,11 @@ function createSlug(value) {
 }
 
 function RentalsPage() {
+  /*
+   * Gli stati degli input sono separati dai filtri applicati.
+   * Così digitare una data o una ricerca non avvia una chiamata API a ogni
+   * carattere: l'elenco cambia soltanto quando si preme il pulsante Cerca.
+   */
   // Conserva i noleggi restituiti per la pagina corrente.
   const [rentals, setRentals] = useState([]);
 
@@ -95,6 +100,7 @@ function RentalsPage() {
       if (dateTo) params.date_to = dateTo;
 
       try {
+        // Laravel applica filtri, ordinamento e paginazione sul dataset intero.
         const response = await api.get("/api/rentals", {
           params,
           signal: controller.signal,
@@ -183,6 +189,12 @@ function RentalsPage() {
     dateToInput ||
     dateFrom ||
     dateTo;
+
+  /*
+   * Da qui inizia la parte visuale: intestazione, filtri, tabella e
+   * paginazione. Tutti i valori economici e temporali arrivano già dall'API;
+   * le funzioni di formato cambiano soltanto il modo in cui vengono mostrati.
+   */
 
   return (
     <>

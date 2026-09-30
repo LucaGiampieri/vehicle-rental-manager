@@ -1,5 +1,11 @@
 import { Link } from "react-router-dom";
 
+/*
+ * Form presentazionale condiviso tra creazione e modifica.
+ * Non comunica direttamente con l'API: riceve valori, errori e funzioni
+ * dalla pagina genitore. Questa separazione evita di duplicare i campi.
+ */
+
 // Formatta gli importi dell'anteprima secondo le convenzioni italiane.
 function formatCurrency(value) {
   return new Intl.NumberFormat("it-IT", {
@@ -77,7 +83,10 @@ function RentalForm({
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      {/* Selezione delle due anagrafiche collegate alla prenotazione. */}
+      {/*
+       * PRIMA SEZIONE: collega la prenotazione a cliente e veicolo.
+       * Le opzioni sono già state caricate e ordinate dalla pagina genitore.
+       */}
       <section className="card border-0 shadow-sm mb-4">
         <div className="card-body p-4">
           <div className="mb-4">
@@ -155,7 +164,11 @@ function RentalForm({
         </div>
       </section>
 
-      {/* Periodo previsto della prenotazione. */}
+      {/*
+       * SECONDA SEZIONE: periodo previsto della prenotazione.
+       * Il backend controllerà definitivamente ordine delle date,
+       * sovrapposizioni e validità della patente del cliente.
+       */}
       <section className="card border-0 shadow-sm mb-4">
         <div className="card-body p-4">
           <div className="mb-4">
@@ -222,7 +235,11 @@ function RentalForm({
         </div>
       </section>
 
-      {/* Tariffa concordata, caparra e riepilogo calcolato. */}
+      {/*
+       * TERZA SEZIONE: tariffa, anticipo e riepilogo economico.
+       * Il calcolo nel browser è un'anteprima; Laravel ricalcola il totale
+       * quando salva, quindi non si basa mai soltanto sul dato visualizzato.
+       */}
       <section className="card border-0 shadow-sm mb-4">
         <div className="card-body p-4">
           <div className="mb-4">
@@ -316,7 +333,7 @@ function RentalForm({
         </div>
       </section>
 
-      {/* Annotazioni operative facoltative. */}
+      {/* QUARTA SEZIONE: annotazioni operative facoltative. */}
       <section className="card border-0 shadow-sm mb-4">
         <div className="card-body p-4">
           <label htmlFor="rental-notes" className="form-label fw-semibold">
@@ -338,7 +355,10 @@ function RentalForm({
         </div>
       </section>
 
-      {/* Azioni finali del form. */}
+      {/*
+       * AZIONI FINALI: durante l'invio il pulsante viene disabilitato
+       * per impedire due salvataggi accidentali della stessa prenotazione.
+       */}
       <div className="d-flex flex-wrap justify-content-end gap-3">
         <Link to={cancelTo} className="btn btn-outline-secondary">
           Annulla
