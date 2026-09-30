@@ -5,6 +5,8 @@ import DefaultLayout from "./layouts/DefaultLayout";
 import DashboardPage from "./pages/DashboardPage";
 import RentalsPage from "./pages/RentalsPage";
 import NewRentalPage from "./pages/NewRentalPage";
+import RentalDetailsPage from "./pages/RentalDetailsPage";
+import EditRentalPage from "./pages/EditRentalPage";
 import CustomersPage from "./pages/CustomersPage";
 import CustomerDetailsPage from "./pages/CustomerDetailsPage";
 import NewCustomerPage from "./pages/NewCustomerPage";
@@ -31,6 +33,14 @@ function App() {
               <Route index element={<DashboardPage />} />
               <Route path="rentals" element={<RentalsPage />} />
               <Route path="rentals/new" element={<NewRentalPage />} />
+              <Route
+                path="rentals/:rentalId/edit"
+                element={<EditRentalPage />}
+              />
+              <Route
+                path="rentals/:rentalId"
+                element={<RentalDetailsPage />}
+              />
               <Route path="customers" element={<CustomersPage />} />
               <Route path="customers/new" element={<NewCustomerPage />} />
               <Route

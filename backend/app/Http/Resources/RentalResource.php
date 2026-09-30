@@ -69,7 +69,9 @@ class RentalResource extends JsonResource
                     'license_plate' => $this->vehicle->license_plate,
                     'brand' => $this->vehicle->brand,
                     'model' => $this->vehicle->model,
-                    'type' => $this->vehicle->type,
+'type' => $this->vehicle->type,
+'mileage' => $this->vehicle->mileage,
+
                 ]
             ),
 

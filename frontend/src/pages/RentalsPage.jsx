@@ -383,7 +383,12 @@ function RentalsPage() {
                     return (
                       <tr key={rental.id}>
                         <td>
-                          <div className="fw-semibold">#{rental.id}</div>
+                          <Link
+                            to={`/rentals/${rental.id}`}
+                            className="fw-semibold text-decoration-none"
+                          >
+                            #{rental.id}
+                          </Link>
                           <div className="small text-secondary">
                             {rental.chargeable_days}{" "}
                             {rental.chargeable_days === 1 ? "giorno" : "giorni"}{" "}
@@ -500,9 +505,23 @@ function RentalsPage() {
 
                         {/* Stato operativo tradotto e distinto per colore. */}
                         <td>
-                          <span className={`badge ${status.badgeClass}`}>
-                            {status.label}
-                          </span>
+                          <div className="d-flex align-items-center gap-2">
+                            <span className={`badge ${status.badgeClass}`}>
+                              {status.label}
+                            </span>
+
+                            <Link
+                              to={`/rentals/${rental.id}`}
+                              className="btn btn-sm btn-outline-primary"
+                              aria-label={`Apri il noleggio numero ${rental.id}`}
+                              title="Apri dettaglio"
+                            >
+                              <i
+                                className="bi bi-arrow-right"
+                                aria-hidden="true"
+                              ></i>
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
