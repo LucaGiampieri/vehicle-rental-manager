@@ -47,8 +47,15 @@ class DemoDataSeeder extends Seeder
             $customers = $this->createCustomers($today);
             $spaces = $this->createParkingSpaces();
 
+            // Libera soltanto i posti appartenenti alla nuova autorimessa demo.
             ParkingSpace::query()
-                ->where('zone', 'main')
+                ->whereIn('zone', [
+                    'compact_top',
+                    'medium',
+                    'large',
+                    'extra_large',
+                    'compact_bottom',
+                ])
                 ->update(['vehicle_id' => null]);
 
             $activeRentals = $this->createRentals(
@@ -161,25 +168,110 @@ class DemoDataSeeder extends Seeder
     }
 
     /** @return Collection<string, ParkingSpace> */
+    /**
+     * Crea i posti della zona principale dell'autorimessa.
+     *
+     * La pianta è composta da 40 celle:
+     * - 4 file;
+     * - 10 colonne;
+     * - una corsia centrale verrà rappresentata graficamente
+     *   tra la seconda e la terza fila.
+     *
+     * @return Collection<string, ParkingSpace>
+     */
+    /**
+     * Crea la pianta completa dell'autorimessa.
+     *
+     * Le celle sono suddivise in aree specializzate:
+     * - 20 posti compatti per auto e moto;
+     * - 8 posti medi per furgoni;
+     * - 7 posti grandi per camper e autocarri;
+     * - 3 posti extra large per autobus e mezzi molto lunghi.
+     *
+     * In totale vengono create 88 celle tecniche, che rappresentano
+     * 38 posti reali di dimensioni differenti.
+     *
+     * @return Collection<string, ParkingSpace>
+     */
     private function createParkingSpaces(): Collection
     {
         $spaces = collect();
 
-        for ($row = 1; $row <= 4; $row++) {
-            for ($column = 1; $column <= 6; $column++) {
-                $space = ParkingSpace::updateOrCreate(
-                    ['zone' => 'main', 'row_number' => $row, 'column_number' => $column],
-                    [
-                        'label' => "M-{$row}-{$column}",
-                        'vehicle_id' => null,
-                        'is_active' => ! ($row === 4 && $column === 6),
-                        'notes' => $row === 4 && $column === 6
-                            ? 'Cella temporaneamente non utilizzabile.'
-                            : null,
-                    ]
-                );
+        /*
+         * Ogni zona indica:
+         * - il nome tecnico salvato nel database;
+         * - il prefisso mostrato nell'etichetta;
+         * - il numero di righe;
+         * - il numero di colonne.
+         */
+        $zones = [
+            [
+                'name' => 'compact_top',
+                'prefix' => 'AT',
+                'rows' => 1,
+                'columns' => 10,
+            ],
+            [
+                'name' => 'medium',
+                'prefix' => 'F',
+                'rows' => 2,
+                'columns' => 8,
+            ],
+            [
+                'name' => 'large',
+                'prefix' => 'G',
+                'rows' => 2,
+                'columns' => 14,
+            ],
+            [
+                'name' => 'extra_large',
+                'prefix' => 'XL',
+                'rows' => 2,
+                'columns' => 12,
+            ],
+            [
+                'name' => 'compact_bottom',
+                'prefix' => 'AB',
+                'rows' => 1,
+                'columns' => 10,
+            ],
+        ];
 
-                $spaces->put("{$row}-{$column}", $space);
+        foreach ($zones as $zone) {
+            for ($row = 1; $row <= $zone['rows']; $row++) {
+                for ($column = 1; $column <= $zone['columns']; $column++) {
+                    /*
+                     * updateOrCreate rende il seeder ripetibile:
+                     * una posizione esistente viene aggiornata senza duplicarla.
+                     */
+                    $space = ParkingSpace::updateOrCreate(
+                        [
+                            'zone' => $zone['name'],
+                            'row_number' => $row,
+                            'column_number' => $column,
+                        ],
+                        [
+                            'label' => sprintf(
+                                '%s-%d-%d',
+                                $zone['prefix'],
+                                $row,
+                                $column
+                            ),
+                            'vehicle_id' => null,
+                            'is_active' => true,
+                            'notes' => null,
+                        ]
+                    );
+
+                    /*
+                     * La zona viene inclusa nella chiave perché più aree
+                     * possono possedere la stessa riga e la stessa colonna.
+                     */
+                    $spaces->put(
+                        "{$zone['name']}:{$row}-{$column}",
+                        $space
+                    );
+                }
             }
         }
 
@@ -334,14 +426,36 @@ class DemoDataSeeder extends Seeder
         }
     }
 
-    private function parkVehicles(Collection $vehicles, Collection $spaces): void
-    {
+    /**
+     * Posiziona alcuni mezzi demo nei parcheggi compatibili.
+     */
+    private function parkVehicles(
+        Collection $vehicles,
+        Collection $spaces
+    ): void {
         $placements = [
-            0 => ['1-1'], 1 => ['1-2', '1-3'], 4 => ['1-4'],
-            7 => ['1-5'], 10 => ['1-6'],
-            8 => ['2-1', '2-2', '2-3', '2-4'],
-            5 => ['2-5'], 12 => ['2-6'],
-            17 => ['3-1', '3-2'], 18 => ['3-3'],
+            // Auto e moto nella zona compatta superiore.
+            0 => ['compact_top:1-1'],
+            4 => ['compact_top:1-2'],
+            7 => ['compact_top:1-3'],
+            10 => ['compact_top:1-4'],
+
+            // Auto e moto nella zona compatta inferiore.
+            5 => ['compact_bottom:1-1'],
+            12 => ['compact_bottom:1-2'],
+            18 => ['compact_bottom:1-3'],
+
+            // I furgoni occupano due celle affiancate.
+            1 => ['medium:1-1', 'medium:1-2'],
+            17 => ['medium:1-3', 'medium:1-4'],
+
+            // Il mezzo grande occupa un blocco di quattro celle.
+            8 => [
+                'large:1-1',
+                'large:1-2',
+                'large:2-1',
+                'large:2-2',
+            ],
         ];
 
         foreach ($placements as $vehicleIndex => $positions) {
@@ -361,8 +475,16 @@ class DemoDataSeeder extends Seeder
         $today
     ): void {
         $parked = [
-            0 => '1-1', 1 => '1-2', 4 => '1-4', 7 => '1-5', 10 => '1-6',
-            8 => '2-1', 5 => '2-5', 12 => '2-6', 17 => '3-1', 18 => '3-3',
+            0 => 'compact_top:1-1',
+            4 => 'compact_top:1-2',
+            7 => 'compact_top:1-3',
+            10 => 'compact_top:1-4',
+            5 => 'compact_bottom:1-1',
+            12 => 'compact_bottom:1-2',
+            18 => 'compact_bottom:1-3',
+            1 => 'medium:1-1',
+            17 => 'medium:1-3',
+            8 => 'large:1-1',
         ];
 
         foreach ($parked as $vehicleIndex => $position) {
@@ -380,7 +502,7 @@ class DemoDataSeeder extends Seeder
                 'from_row_number' => null,
                 'from_column_number' => null,
                 'to_parking_space_id' => $space->id,
-                'to_zone' => 'main',
+                'to_zone' => $space->zone,
                 'to_row_number' => $space->row_number,
                 'to_column_number' => $space->column_number,
                 'parking_units' => $vehicle->parking_units,
@@ -389,10 +511,17 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
-        foreach ([2, 6, 13, 21] as $index => $vehicleIndex) {
+        $departures = [
+            2 => 'large:1-3',
+            6 => 'medium:1-5',
+            13 => 'large:1-5',
+            21 => 'medium:1-7',
+        ];
+
+        foreach ($departures as $vehicleIndex => $position) {
             $vehicle = $vehicles->get($vehicleIndex);
             $rental = $activeRentals->get($vehicleIndex);
-            $space = $spaces->get('4-'.($index + 1));
+            $space = $spaces->get($position);
 
             ParkingMovement::create([
                 'vehicle_id' => $vehicle->id,
@@ -401,9 +530,9 @@ class DemoDataSeeder extends Seeder
                 'rental_id' => $rental->id,
                 'type' => ParkingMovement::TYPE_RENTAL_DEPARTURE,
                 'from_parking_space_id' => $space->id,
-                'from_zone' => 'main',
-                'from_row_number' => 4,
-                'from_column_number' => $index + 1,
+                'from_zone' => $space->zone,
+                'from_row_number' => $space->row_number,
+                'from_column_number' => $space->column_number,
                 'to_parking_space_id' => null,
                 'to_zone' => null,
                 'to_row_number' => null,

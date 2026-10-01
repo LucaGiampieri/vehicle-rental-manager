@@ -58,6 +58,22 @@ function Navbar() {
             Dashboard
           </NavLink>
 
+          {/*
+           * Collegamento alla mappa operativa
+           * e allo storico dell'autorimessa.
+           */}
+          <NavLink
+            to="/garage"
+            className={({ isActive }) =>
+              `app-navigation__link ${
+                isActive ? "app-navigation__link--active" : ""
+              }`
+            }
+          >
+            <i className="bi bi-p-square" aria-hidden="true"></i>
+            Autorimessa
+          </NavLink>
+
           <NavLink
             to="/rentals"
             className={({ isActive }) =>

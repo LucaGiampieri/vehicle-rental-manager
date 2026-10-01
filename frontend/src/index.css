@@ -2260,10 +2260,9 @@ button:focus-visible {
 
 .dashboard-reservation-row {
   display: grid;
-  grid-template-columns: auto minmax(150px, 0.9fr) minmax(150px, 0.9fr) minmax(
-      260px,
-      1.4fr
-    ) auto;
+  grid-template-columns:
+    auto minmax(150px, 0.9fr) minmax(150px, 0.9fr) minmax(260px, 1.4fr)
+    auto;
   align-items: center;
   gap: 1rem;
   padding: 1rem;
@@ -2519,10 +2518,9 @@ button:focus-visible {
 
 .dashboard-expense-row {
   display: grid;
-  grid-template-columns: auto minmax(180px, 1.2fr) minmax(200px, 1.3fr) minmax(
-      120px,
-      0.7fr
-    ) auto auto;
+  grid-template-columns:
+    auto minmax(180px, 1.2fr) minmax(200px, 1.3fr) minmax(120px, 0.7fr)
+    auto auto;
   align-items: center;
   gap: 1rem;
   padding: 1rem;
@@ -2609,4 +2607,1159 @@ button:focus-visible {
     position: absolute;
     visibility: hidden;
   }
+}
+
+/* =========================================================
+   AUTORIMESSA
+   Mappa, riepilogo, operazioni e storico dei movimenti
+   ========================================================= */
+
+/* Schede riepilogative superiori. */
+.garage-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.garage-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 112px;
+  padding: 1.25rem;
+  border: 1px solid #e6eaf0;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(24, 39, 75, 0.06);
+}
+
+.garage-summary-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 0.85rem;
+  font-size: 1.25rem;
+}
+
+.garage-summary-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.garage-summary-card strong {
+  color: #172033;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.garage-summary-card div span {
+  color: #697386;
+  font-size: 0.9rem;
+}
+
+.garage-summary-card--available .garage-summary-card__icon {
+  color: #16794a;
+  background: #e8f7ef;
+}
+
+.garage-summary-card--occupied .garage-summary-card__icon {
+  color: #2457c5;
+  background: #e9f0ff;
+}
+
+.garage-summary-card--vehicles .garage-summary-card__icon {
+  color: #7747c8;
+  background: #f1ebff;
+}
+
+.garage-summary-card--disabled .garage-summary-card__icon {
+  color: #6c7480;
+  background: #edf0f3;
+}
+
+/*
+ * Area principale:
+ * mappa a sinistra e pannello operativo a destra.
+ */
+.garage-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  align-items: start;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.garage-map-card {
+  min-width: 0;
+}
+
+.garage-map-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Legenda dei colori. */
+.garage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.garage-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #697386;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.garage-legend__dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.garage-legend__dot--available {
+  background: #31a269;
+}
+
+.garage-legend__dot--occupied {
+  background: #3972df;
+}
+
+.garage-legend__dot--disabled {
+  background: #9aa2ae;
+}
+
+.garage-legend__dot--selected {
+  background: #f59f24;
+}
+
+/* Messaggio quando non esistono celle. */
+.garage-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  padding: 2rem;
+  color: #697386;
+  text-align: center;
+}
+
+.garage-empty-state > i {
+  margin-bottom: 1rem;
+  color: #a7afbb;
+  font-size: 2.5rem;
+}
+
+.garage-empty-state h3 {
+  margin-bottom: 0.4rem;
+  color: #293245;
+  font-size: 1.05rem;
+}
+
+.garage-empty-state p {
+  max-width: 420px;
+  margin: 0;
+}
+
+/*
+ * Pannello operativo.
+ * Resta visibile durante lo scorrimento su schermi grandi.
+ */
+.garage-operations {
+  position: sticky;
+  top: 1.25rem;
+}
+
+.garage-vehicle-summary,
+.garage-selection-summary {
+  padding: 1rem;
+  border: 1px solid #e5eaf0;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+}
+
+.garage-vehicle-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.garage-vehicle-summary > div:first-child,
+.garage-selection-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.garage-vehicle-summary__label,
+.garage-selection-summary__label {
+  color: #7a8494;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.garage-vehicle-summary strong,
+.garage-selection-summary strong {
+  color: #202a3b;
+}
+
+.garage-vehicle-summary small,
+.garage-selection-summary span {
+  color: #697386;
+  font-size: 0.8rem;
+}
+
+.garage-vehicle-summary__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  text-align: right;
+}
+
+.garage-vehicle-summary__status > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #697386;
+  font-size: 0.75rem;
+}
+
+.garage-operation-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7483;
+  font-size: 0.8rem;
+}
+
+/* Storico dei movimenti. */
+.garage-history {
+  margin-bottom: 1.5rem;
+}
+
+.garage-history__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 90px;
+  color: #697386;
+}
+
+.garage-history__empty {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px dashed #cfd5dd;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+}
+
+.garage-history__empty > i {
+  color: #8b95a5;
+  font-size: 1.5rem;
+}
+
+.garage-history__empty h3 {
+  margin: 0 0 0.2rem;
+  color: #293245;
+  font-size: 0.95rem;
+}
+
+.garage-history__empty p {
+  margin: 0;
+  color: #697386;
+  font-size: 0.85rem;
+}
+
+.garage-history__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.garage-history__item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.garage-history__item:first-child {
+  padding-top: 0;
+}
+
+.garage-history__item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.garage-history__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 0.75rem;
+  color: #2f61bf;
+  background: #eaf1ff;
+}
+
+.garage-history__content {
+  min-width: 0;
+}
+
+.garage-history__title {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.garage-history__title > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.garage-history__title strong {
+  color: #202a3b;
+  font-size: 0.9rem;
+}
+
+.garage-history__title div span {
+  color: #697386;
+  font-size: 0.78rem;
+}
+
+.garage-history__plate {
+  align-self: flex-start;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #dce2ea;
+  border-radius: 0.4rem;
+  color: #3b4659;
+  background: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.garage-history__route {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  color: #485466;
+  font-size: 0.8rem;
+}
+
+.garage-history__route i {
+  color: #9aa3b1;
+}
+
+.garage-history__metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  margin-top: 0.55rem;
+  color: #7a8494;
+  font-size: 0.72rem;
+}
+
+.garage-history__metadata span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.garage-history__notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.65rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  color: #596477;
+  background: #f6f8fa;
+  font-size: 0.78rem;
+}
+
+/* =========================================================
+   RESPONSIVE AUTORIMESSA
+   ========================================================= */
+
+@media (max-width: 1199.98px) {
+  .garage-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .garage-workspace {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .garage-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .garage-operations {
+    position: static;
+  }
+
+  .garage-map-card__heading {
+    flex-direction: column;
+  }
+
+  .garage-legend {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .garage-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .garage-summary-card {
+    min-height: 92px;
+  }
+
+  .garage-zone {
+    padding: 1rem;
+  }
+
+  .garage-zone__heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .garage-zone__numbers {
+    justify-content: flex-start;
+  }
+
+  .garage-vehicle-summary {
+    flex-direction: column;
+  }
+
+  .garage-vehicle-summary__status {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .garage-history__title {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .garage-history__plate {
+    align-self: flex-start;
+  }
+}
+
+/* =========================================================
+
+/* =========================================================
+   PIANTA UNICA DELL'AUTORIMESSA
+   38 stalli reali ricavati da 88 celle tecniche
+   ========================================================= */
+
+.garage-blueprint,
+.garage-plan {
+  width: 100%;
+  min-width: 0;
+}
+
+.garage-drag-instruction {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.7rem;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.garage-plan__building {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 2.15rem 0.8rem 0.75rem;
+  overflow: hidden;
+  border: 3px solid #475569;
+  border-radius: 0.8rem;
+  background: #eef1f4;
+  box-shadow:
+    inset 0 0 0 4px #cbd5e1,
+    0 12px 28px rgba(15, 23, 42, 0.1);
+  transition: box-shadow 160ms ease;
+}
+
+.garage-plan__building--dragging {
+  box-shadow:
+    inset 0 0 0 4px #93c5fd,
+    0 14px 32px rgba(37, 99, 235, 0.18);
+}
+
+.garage-plan__wall {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.65rem;
+  border-bottom: 2px solid #94a3b8;
+  background: #dbe1e7;
+  color: #475569;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/*
+ * Tutte le aree appartengono allo stesso pavimento.
+ * Le corsie vuote separano le file come in un parcheggio reale.
+ */
+.garage-plan__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.42rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.garage-plan__zone {
+  min-width: 0;
+  margin-inline: auto;
+}
+
+/*
+ * Scala unica basata su 14 colonne tecniche.
+ * Ogni cella mantiene la stessa larghezza in tutte le aree.
+ */
+.garage-plan__zone--compact_top,
+.garage-plan__zone--compact_bottom {
+  width: 71.4286%;
+}
+
+.garage-plan__zone--medium {
+  width: 57.1429%;
+}
+
+.garage-plan__zone--large {
+  width: 100%;
+}
+
+.garage-plan__zone--extra_large {
+  width: 85.7143%;
+}
+
+.garage-plan__zone-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  min-height: 1.15rem;
+  padding: 0 0.2rem;
+}
+
+.garage-plan__zone-heading strong {
+  overflow: hidden;
+  color: #334155;
+  font-size: 0.64rem;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+  white-space: nowrap;
+}
+
+.garage-plan__zone-heading span {
+  flex-shrink: 0;
+  color: #64748b;
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+
+.garage-plan__zone-grid {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 3px;
+  border-block: 2px solid #94a3b8;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+/* Proporzioni verticali delle differenti aree. */
+.garage-plan__zone--compact_top .garage-plan__zone-grid,
+.garage-plan__zone--compact_bottom .garage-plan__zone-grid {
+  height: 42px;
+}
+
+.garage-plan__zone--medium .garage-plan__zone-grid,
+.garage-plan__zone--large .garage-plan__zone-grid,
+.garage-plan__zone--extra_large .garage-plan__zone-grid {
+  height: 84px;
+}
+
+/* Corsie di manovra con segnaletica centrale tratteggiata. */
+.garage-plan__lane {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  padding: 0 0.7rem;
+  overflow: hidden;
+  border-radius: 0.2rem;
+  background: linear-gradient(180deg, #64748b, #475569 50%, #64748b);
+  color: #ffffff;
+}
+
+.garage-plan__lane::after {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  left: 0.7rem;
+  height: 2px;
+  content: "";
+  background: repeating-linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.85) 0 22px,
+    transparent 22px 40px
+  );
+  transform: translateY(-50%);
+}
+
+.garage-plan__lane i,
+.garage-plan__lane span {
+  position: relative;
+  z-index: 2;
+}
+
+.garage-plan__lane span {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #475569;
+  font-size: 0.52rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* =========================================================
+   STALLI REALI
+   ========================================================= */
+
+.garage-parking-bay {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.15rem;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.16rem 0.2rem;
+  overflow: hidden;
+  border: 0;
+  border-inline: 2px solid #94a3b8;
+  border-radius: 0;
+  background: rgba(248, 250, 252, 0.42);
+  color: #64748b;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease;
+}
+
+.garage-parking-bay:hover,
+.garage-parking-bay:focus-visible {
+  z-index: 4;
+  background: rgba(219, 234, 254, 0.78);
+  outline: none;
+  box-shadow: inset 0 0 0 2px #60a5fa;
+}
+
+.garage-parking-bay__label {
+  color: #475569;
+  font-size: clamp(0.43rem, 0.75vw, 0.58rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.garage-parking-bay__state {
+  overflow: hidden;
+  font-size: clamp(0.36rem, 0.62vw, 0.5rem);
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.garage-parking-bay--occupied {
+  background: rgba(219, 234, 254, 0.42);
+  color: #2563eb;
+}
+
+.garage-parking-bay--disabled {
+  border-color: #94a3b8;
+  background: repeating-linear-gradient(
+    135deg,
+    #e2e8f0 0 5px,
+    #cbd5e1 5px 10px
+  );
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.garage-parking-bay--selected {
+  z-index: 4;
+  background: rgba(191, 219, 254, 0.92);
+  box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+.garage-parking-bay--valid-target {
+  z-index: 5;
+  background: rgba(187, 247, 208, 0.95);
+  color: #166534;
+  box-shadow: inset 0 0 0 2px #22c55e;
+}
+
+.garage-parking-bay--invalid-target {
+  opacity: 0.34;
+}
+
+.garage-parking-bay--drop-ready {
+  z-index: 8;
+  background: #86efac;
+  box-shadow:
+    inset 0 0 0 3px #16a34a,
+    0 0 0 3px rgba(34, 197, 94, 0.24);
+}
+
+/* =========================================================
+   VEICOLI VISTI DALL'ALTO
+   ========================================================= */
+
+.garage-blueprint__vehicle {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px 4px 3px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Nome e targa posizionati sopra la sagoma del mezzo. */
+.garage-plan .garage-blueprint__vehicle .garage-blueprint__vehicle-label {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  left: 3px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 15px;
+  padding: 1px 3px;
+  overflow: hidden;
+  border-radius: 3px;
+  border: 1px solid rgba(147, 197, 253, 0.95);
+  color: #172033;
+  background: rgba(255, 255, 255, 0.96);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.garage-blueprint__vehicle-name {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: inherit;
+  font-family: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.garage-blueprint__vehicle-name {
+  width: 100%;
+  font-size: clamp(0.48rem, 0.64vw, 0.64rem) !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-align: center;
+}
+
+.garage-blueprint__vehicle:hover .garage-top-car,
+.garage-blueprint__vehicle--selected .garage-top-car {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.garage-blueprint__vehicle:active {
+  cursor: grabbing;
+}
+
+.garage-blueprint__vehicle--dragging {
+  z-index: 20;
+  opacity: 0.58;
+  cursor: grabbing;
+  pointer-events: none;
+  transform: scale(0.94);
+}
+
+.garage-blueprint__vehicle--disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
+.garage-top-car {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 2px solid #1e40af;
+  border-radius: 7px;
+  background: #3b82f6;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 2px 4px rgba(15, 23, 42, 0.28);
+}
+
+/* Prima e ultima fila: mezzi orizzontali larghi quanto lo stallo. */
+.garage-plan__zone--compact_top .garage-top-car,
+.garage-plan__zone--compact_bottom .garage-top-car {
+  width: calc(100% - 8px);
+  max-width: 104px;
+  height: 27px;
+  border-radius: 6px;
+}
+
+/* Seconda fila: furgoni orizzontali lunghi quanto il parcheggio. */
+.garage-plan__zone--medium .garage-top-car {
+  width: calc(100% - 10px);
+  max-width: 250px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+/* Terza fila: camper e autocarri orientati orizzontalmente. */
+.garage-plan__zone--large .garage-top-car {
+  width: calc(100% - 12px);
+  max-width: 250px;
+  height: 44px;
+  border-radius: 7px;
+}
+
+/* Autobus e mezzi extra-large sono disegnati in orizzontale. */
+.garage-plan__zone--extra_large .garage-top-car {
+  width: calc(100% - 12px);
+  max-width: 260px;
+  height: 44px;
+  border-radius: 7px;
+}
+
+.garage-top-car__roof {
+  position: absolute;
+  inset: 28% 18%;
+  border-radius: 3px;
+  background: rgba(219, 234, 254, 0.55);
+}
+
+.garage-top-car__window {
+  position: absolute;
+  right: 18%;
+  left: 18%;
+  height: 16%;
+  border-radius: 2px;
+  background: #bfdbfe;
+}
+
+.garage-top-car__window--front {
+  top: 14%;
+}
+
+.garage-top-car__window--rear {
+  bottom: 14%;
+}
+
+.garage-plan__zone--compact_top .garage-top-car__window,
+.garage-plan__zone--compact_bottom .garage-top-car__window,
+.garage-plan__zone--medium .garage-top-car__window,
+.garage-plan__zone--large .garage-top-car__window,
+.garage-plan__zone--extra_large .garage-top-car__window {
+  top: 18%;
+  bottom: 18%;
+  width: 10%;
+  height: auto;
+}
+
+.garage-plan__zone--compact_top .garage-top-car__window--front,
+.garage-plan__zone--compact_bottom .garage-top-car__window--front,
+.garage-plan__zone--medium .garage-top-car__window--front,
+.garage-plan__zone--large .garage-top-car__window--front,
+.garage-plan__zone--extra_large .garage-top-car__window--front {
+  right: 12%;
+  left: auto;
+}
+
+.garage-plan__zone--compact_top .garage-top-car__window--rear,
+.garage-plan__zone--compact_bottom .garage-top-car__window--rear,
+.garage-plan__zone--medium .garage-top-car__window--rear,
+.garage-plan__zone--large .garage-top-car__window--rear,
+.garage-plan__zone--extra_large .garage-top-car__window--rear {
+  right: auto;
+  left: 12%;
+}
+
+.garage-top-car__wheel {
+  position: absolute;
+  width: 3px;
+  height: 7px;
+  border-radius: 2px;
+  background: #0f172a;
+}
+
+.garage-top-car__wheel--front-left {
+  top: 16%;
+  left: -3px;
+}
+
+.garage-top-car__wheel--front-right {
+  top: 16%;
+  right: -3px;
+}
+
+.garage-top-car__wheel--rear-left {
+  bottom: 16%;
+  left: -3px;
+}
+
+.garage-top-car__wheel--rear-right {
+  right: -3px;
+  bottom: 16%;
+}
+
+/* Entrata e uscita collegate all'ultima corsia. */
+.garage-plan__access {
+  display: grid;
+  grid-template-columns: auto minmax(40px, 110px) auto;
+  align-items: center;
+  justify-content: end;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-right: 0.4rem;
+  color: #475569;
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.garage-plan__access span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.garage-plan__access-road {
+  height: 5px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    to right,
+    #64748b 0 12px,
+    transparent 12px 20px
+  );
+}
+
+.garage-blueprint__help {
+  margin: 0.65rem 0 0;
+  color: #64748b;
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+/* =========================================================
+   RESPONSIVE DELLA PIANTA
+   ========================================================= */
+
+@media (max-width: 991.98px) {
+  .garage-plan__building {
+    padding-inline: 0.55rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .garage-drag-instruction {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.68rem;
+  }
+
+  .garage-plan__building {
+    padding: 1.9rem 0.3rem 0.55rem;
+    border-width: 2px;
+  }
+
+  .garage-plan__content {
+    gap: 0.28rem;
+  }
+
+  .garage-plan__zone-heading {
+    min-height: 0.9rem;
+  }
+
+  .garage-plan__zone-heading strong {
+    font-size: 0.52rem;
+  }
+
+  .garage-plan__zone-heading span {
+    display: none;
+  }
+
+  .garage-plan__zone-grid {
+    gap: 1px;
+    padding-inline: 1px;
+  }
+
+  .garage-plan__zone--compact_top .garage-plan__zone-grid,
+  .garage-plan__zone--compact_bottom .garage-plan__zone-grid {
+    height: 34px;
+  }
+
+  .garage-plan__zone--medium .garage-plan__zone-grid,
+  .garage-plan__zone--large .garage-plan__zone-grid,
+  .garage-plan__zone--extra_large .garage-plan__zone-grid {
+    height: 68px;
+  }
+
+  .garage-plan__lane {
+    min-height: 22px;
+  }
+
+  .garage-plan__lane span {
+    font-size: 0.43rem;
+  }
+
+  .garage-plan__lane i {
+    font-size: 0.65rem;
+  }
+
+  .garage-parking-bay {
+    padding: 0.08rem 0.1rem;
+    border-inline-width: 1px;
+  }
+
+  .garage-parking-bay__state {
+    display: none;
+  }
+
+  .garage-top-car {
+    border-width: 1px;
+  }
+
+  .garage-plan__zone--compact_top .garage-top-car,
+  .garage-plan__zone--compact_bottom .garage-top-car {
+    width: calc(100% - 4px);
+    height: 18px;
+  }
+
+  .garage-plan__zone--medium .garage-top-car {
+    width: calc(100% - 6px);
+    height: 25px;
+  }
+
+  .garage-plan__zone--large .garage-top-car,
+  .garage-plan__zone--extra_large .garage-top-car {
+    width: calc(100% - 6px);
+    height: 28px;
+  }
+
+  .garage-top-car__wheel {
+    display: none;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .garage-plan__building {
+    padding-inline: 0.18rem;
+  }
+
+  .garage-plan__lane {
+    min-height: 18px;
+  }
+
+  .garage-plan__lane span {
+    font-size: 0.38rem;
+  }
+
+  .garage-plan__lane i {
+    display: none;
+  }
+
+  .garage-parking-bay__label {
+    font-size: 0.38rem;
+  }
+
+  .garage-plan__access {
+    grid-template-columns: auto 28px auto;
+    font-size: 0.48rem;
+  }
+
+  .garage-plan .garage-blueprint__vehicle {
+    padding-top: 15px;
+    padding-inline: 2px;
+  }
+
+  .garage-plan .garage-blueprint__vehicle .garage-blueprint__vehicle-label {
+    right: 1px;
+    left: 1px;
+    height: 12px;
+    padding: 1px 2px;
+  }
+
+  .garage-blueprint__vehicle-name {
+    font-size: 0.38rem !important;
+  }
+
 }

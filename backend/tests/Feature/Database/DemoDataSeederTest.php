@@ -37,7 +37,7 @@ class DemoDataSeederTest extends TestCase
 
         $this->assertDatabaseCount('vehicles', 30);
         $this->assertDatabaseCount('customers', 15);
-        $this->assertDatabaseCount('parking_spaces', 24);
+        $this->assertDatabaseCount('parking_spaces', 88);
         $this->assertDatabaseCount('rentals', 30);
         $this->assertDatabaseCount('expenses', 45);
         $this->assertDatabaseCount('parking_movements', 14);
@@ -60,12 +60,49 @@ class DemoDataSeederTest extends TestCase
             'type' => ParkingMovement::TYPE_RENTAL_DEPARTURE,
         ]);
 
-        $this->assertDatabaseHas('parking_spaces', [
-            'zone' => 'main',
-            'row_number' => 4,
-            'column_number' => 6,
-            'is_active' => 0,
-        ]);
+        // Verifica la quantità di celle tecniche di ogni area.
+        $this->assertSame(
+            10,
+            ParkingSpace::query()
+                ->where('zone', 'compact_top')
+                ->count()
+        );
+
+        $this->assertSame(
+            16,
+            ParkingSpace::query()
+                ->where('zone', 'medium')
+                ->count()
+        );
+
+        $this->assertSame(
+            28,
+            ParkingSpace::query()
+                ->where('zone', 'large')
+                ->count()
+        );
+
+        $this->assertSame(
+            24,
+            ParkingSpace::query()
+                ->where('zone', 'extra_large')
+                ->count()
+        );
+
+        $this->assertSame(
+            10,
+            ParkingSpace::query()
+                ->where('zone', 'compact_bottom')
+                ->count()
+        );
+
+        // Nella nuova pianta non esistono celle bloccate.
+        $this->assertSame(
+            0,
+            ParkingSpace::query()
+                ->where('is_active', false)
+                ->count()
+        );
     }
 
     // Verifica che una seconda esecuzione non duplichi i dati demo.
@@ -76,7 +113,7 @@ class DemoDataSeederTest extends TestCase
 
         $this->assertDatabaseCount('vehicles', 30);
         $this->assertDatabaseCount('customers', 15);
-        $this->assertDatabaseCount('parking_spaces', 24);
+        $this->assertDatabaseCount('parking_spaces', 88);
         $this->assertDatabaseCount('rentals', 30);
         $this->assertDatabaseCount('expenses', 45);
         $this->assertDatabaseCount('parking_movements', 14);

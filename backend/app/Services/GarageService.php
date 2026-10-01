@@ -236,7 +236,16 @@ class GarageService
         ParkingSpace $startingSpace
     ): Collection {
         [$requiredRows, $requiredColumns] =
-            $this->blockDimensions($vehicle->parking_units);
+    $this->blockDimensions($vehicle->parking_units);
+
+        /*
+         * Controlla che il veicolo venga inserito nell'area adatta
+         * alle sue dimensioni e che il blocco inizi dalla cella corretta.
+         */
+        $this->validateParkingArea(
+            $vehicle,
+            $startingSpace
+        );
 
         $positions = [];
 
@@ -312,6 +321,117 @@ class GarageService
         }
 
         return $spaces;
+    }
+
+    /**
+     * Controlla che il veicolo utilizzi una zona compatibile.
+     *
+     * Le regole della nuova autorimessa sono:
+     * - 1 cella: aree compatte per auto e moto;
+     * - 2 celle: area media per furgoni;
+     * - 4 celle: area grande per camper e autocarri;
+     * - 8 celle: area extra large per autobus e mezzi lunghi.
+     *
+     * Le zone non appartenenti alla nuova pianta mantengono il
+     * comportamento generico, utile anche per mappe personalizzate.
+     */
+    private function validateParkingArea(
+        Vehicle $vehicle,
+        ParkingSpace $startingSpace
+    ): void {
+        /*
+ * Le regole specializzate si applicano soltanto alle aree
+ * appartenenti alla nuova pianta dell'autorimessa.
+ *
+ * Le altre zone restano disponibili per eventuali parcheggi
+ * personalizzati, vecchi dati e ambienti di test.
+ */
+        $specializedZones = [
+            'compact_top',
+            'medium',
+            'large',
+            'extra_large',
+            'compact_bottom',
+        ];
+
+        if (! in_array($startingSpace->zone, $specializedZones, true)) {
+            return;
+        }
+
+        $parkingUnits = (int) $vehicle->parking_units;
+
+        // Associa ogni dimensione alle aree nelle quali può entrare.
+        $allowedZones = match ($parkingUnits) {
+            1 => [
+                'compact_top',
+                'compact_bottom',
+            ],
+            2 => [
+                'medium',
+            ],
+            4 => [
+                'large',
+            ],
+            8 => [
+                'extra_large',
+            ],
+            default => [],
+        };
+
+        if (! in_array($startingSpace->zone, $allowedZones, true)) {
+            throw new RuntimeException(
+                'Il veicolo non può essere parcheggiato in questa area.'
+            );
+        }
+
+        /*
+         * Nei posti medi ogni veicolo deve iniziare da una
+         * colonna dispari: 1, 3, 5 oppure 7.
+         */
+        if (
+            $parkingUnits === 2
+            && $startingSpace->column_number % 2 === 0
+        ) {
+            throw new RuntimeException(
+                'Il furgone deve essere posizionato dall’inizio di un posto medio.'
+            );
+        }
+
+        /*
+         * I posti grandi sono blocchi da due righe e due colonne.
+         * Devono quindi iniziare dalla prima riga e da una colonna dispari.
+         */
+        if (
+            $parkingUnits === 4
+            && (
+                $startingSpace->row_number !== 1
+                || $startingSpace->column_number % 2 === 0
+            )
+        ) {
+            throw new RuntimeException(
+                'Il mezzo deve essere posizionato dall’inizio di un posto grande.'
+            );
+        }
+
+        /*
+         * I posti extra large sono blocchi da due righe e quattro colonne.
+         * Le loro colonne iniziali sono 1, 5 e 9.
+         */
+        if (
+            $parkingUnits === 8
+            && (
+                $startingSpace->row_number !== 1
+                || ! in_array(
+                    $startingSpace->column_number,
+                    [1, 5, 9],
+                    true
+                )
+            )
+        ) {
+            throw new RuntimeException(
+                'Il mezzo deve essere posizionato dall’inizio di un posto extra large.'
+            );
+        }
     }
 
     // Stabilisce la forma del blocco in base alle dimensioni del veicolo.

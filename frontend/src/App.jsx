@@ -3,6 +3,7 @@ import AuthProvider from "./context/AuthProvider";
 import RequireAuth from "./components/RequireAuth";
 import DefaultLayout from "./layouts/DefaultLayout";
 import DashboardPage from "./pages/DashboardPage";
+import GaragePage from "./pages/GaragePage";
 import RentalsPage from "./pages/RentalsPage";
 import NewRentalPage from "./pages/NewRentalPage";
 import RentalDetailsPage from "./pages/RentalDetailsPage";
@@ -25,56 +26,91 @@ import LoginPage from "./pages/LoginPage";
 function App() {
   return (
     <BrowserRouter>
-      {/* Il provider condivide la sessione con login, layout e pagine. */}
+      {/*
+       * AuthProvider conserva l'utente autenticato
+       * e condivide la sessione con tutte le pagine.
+       */}
       <AuthProvider>
         <Routes>
-          {/* Il login rimane accessibile anche senza sessione. */}
+          {/*
+           * Il login rimane accessibile senza sessione.
+           * La registrazione pubblica non è prevista.
+           */}
           <Route path="login" element={<LoginPage />} />
 
-          {/* Il controllo vale per tutte le pagine interne al gestionale. */}
+          {/*
+           * RequireAuth protegge tutte le pagine
+           * interne del gestionale.
+           */}
           <Route element={<RequireAuth />}>
             <Route element={<DefaultLayout />}>
+              {/* Dashboard principale. */}
               <Route index element={<DashboardPage />} />
+
+              {/* Autorimessa e mappa dei posti. */}
+              <Route path="garage" element={<GaragePage />} />
+
+              {/* Elenco, creazione e dettaglio noleggi. */}
               <Route path="rentals" element={<RentalsPage />} />
+
               <Route path="rentals/new" element={<NewRentalPage />} />
+
               <Route
                 path="rentals/:rentalId/edit"
                 element={<EditRentalPage />}
               />
-              <Route
-                path="rentals/:rentalId"
-                element={<RentalDetailsPage />}
-              />
+
+              <Route path="rentals/:rentalId" element={<RentalDetailsPage />} />
+
+              {/* Elenco, creazione e dettaglio spese. */}
               <Route path="expenses" element={<ExpensesPage />} />
+
               <Route path="expenses/new" element={<NewExpensePage />} />
+
               <Route
                 path="expenses/:expenseId/edit"
                 element={<EditExpensePage />}
               />
+
               <Route
                 path="expenses/:expenseId"
                 element={<ExpenseDetailsPage />}
               />
+
+              {/* Elenco e gestione clienti. */}
               <Route path="customers" element={<CustomersPage />} />
+
               <Route path="customers/new" element={<NewCustomerPage />} />
+
               <Route
                 path="customers/:customerId/edit"
                 element={<EditCustomerPage />}
               />
+
               <Route
                 path="customers/:customerId/:customerSlug?"
                 element={<CustomerDetailsPage />}
               />
+
+              {/* Elenco e gestione veicoli. */}
               <Route path="vehicles" element={<VehiclesPage />} />
+
               <Route path="vehicles/new" element={<NewVehiclePage />} />
+
               <Route
                 path="vehicles/:vehicleId/edit"
                 element={<EditVehiclePage />}
               />
+
               <Route
                 path="vehicles/:vehicleId/:vehicleSlug?"
                 element={<VehicleDetailsPage />}
               />
+
+              {/*
+               * Qualsiasi indirizzo non riconosciuto
+               * mostra la pagina 404 interna.
+               */}
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Route>
